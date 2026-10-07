@@ -8,7 +8,7 @@ export async function getFeed() {
   if (cached && Date.now() - Date.parse(cached.checkedAt) < TTL) return cached;
   if (pending) return pending;
   pending = (async () => {
-    const result = await collectFeed(config,{previous,env:process.env,timeoutMs:Math.max(1000,Math.min(12000,Number(process.env.FEED_TIMEOUT_MS) || 8000))});
+    const result = await collectFeed(config,{previous,env:process.env,totalTimeoutMs:30000,timeoutMs:Math.max(1000,Math.min(12000,Number(process.env.FEED_TIMEOUT_MS) || 8000))});
     // 全取得失敗を長時間キャッシュしない。成功した接続先の結果は保持する。
     if (result.articles.length) cached = result;
     return result;

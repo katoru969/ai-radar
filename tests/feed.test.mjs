@@ -8,7 +8,7 @@ import {summarizeArticles} from '../lib/summarizer.mjs';
 const now = Date.parse('2026-10-06T12:00:00Z');
 const source = {id:'test',name:'Official',family:'Official',sourceType:'official',url:'https://example.com/news'};
 const rss = `<rss version="2.0"><channel><item><title><![CDATA[Introducing Test AI &amp; Tools]]></title><link>https://example.com/post?utm_source=test</link><pubDate>Mon, 05 Oct 2026 10:00:00 GMT</pubDate><description><![CDATA[<p>API &amp; Agent news</p><script>bad()</script>]]></description></item></channel></rss>`;
-const article = (overrides = {}) => createArticle({title:'Introducing AI Agent',url:'https://example.com/post',date:'2026-10-05T10:00:00Z',description:'New API and Agent tools',source,...overrides},now);
+const article = (overrides = {}) => createArticle({title:'Introducing ChatGPT Agent',url:'https://example.com/post',date:'2026-10-05T10:00:00Z',description:'New ChatGPT features and Agent tools',source,...overrides},now);
 
 test('RSS: CDATA, HTML, entities, date and common Article fields are normalized',() => {
   const [item] = parseFeed(rss,source,now);
@@ -77,14 +77,14 @@ test('Timeout cannot keep a feed request pending indefinitely',async () => {
   const keepAlive = setTimeout(() => {},100);
   try {await assert.rejects(() => fetchText(source.url,{fetchImpl,timeoutMs:10}),/timeout/);} finally {clearTimeout(keepAlive);}
 });
-test('Today: 3–5 recent articles, source switches, publisher variety and latest GitHub release only',() => {
+test('Today: 3–5 useful recent articles, source switches, publisher variety and no SDK releases',() => {
   const items = Array.from({length:8},(_,index) => ({...article({url:`https://example.com/${index}`}), id:String(index),source:`Source ${index}`,sourceFamily:`Family ${index}`,importanceScore:80 + index}));
   items.push({...items[0],id:'old',importanceScore:100,publishedAt:'2026-08-01T00:00:00Z'});
-  items.push({...items[0],id:'new-release',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:90});
-  items.push({...items[0],id:'old-release',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:99,publishedAt:'2026-10-03T00:00:00Z'});
+  items.push({...items[0],id:'new-release',originalTitle:'openai-python SDK release v2',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:90});
+  items.push({...items[0],id:'old-release',originalTitle:'openai-python SDK release v1',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:99,publishedAt:'2026-10-03T00:00:00Z'});
   const selected = selectToday(items,{sources:{},interests:[]},now);
   assert.equal(selected.length,5); assert.ok(!selected.some(item => ['old','old-release'].includes(item.id)));
-  assert.ok(selected.some(item => item.id === 'new-release'));
+  assert.ok(!selected.some(item => item.id === 'new-release'));
   assert.ok(selectToday(items,{sources:{official:false,github:false},interests:[]},now).length === 0);
   assert.ok(selectToday(items.slice(0,2),{sources:{},interests:[]},now).length === 2);
 });

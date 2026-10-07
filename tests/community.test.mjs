@@ -10,11 +10,11 @@ const now = Date.parse('2026-10-07T12:00:00Z');
 const source = {id:'social-test',name:'Test author',family:'Test author',sourceType:'bluesky',actor:'example.bsky.social',aiOnly:true};
 const post = {
   uri:'at://did:plc:test/app.bsky.feed.post/3abc123',author:{did:'did:plc:test',handle:source.actor},
-  record:{text:'New AI Agent API https://example.com/ai',createdAt:'2026-10-06T10:00:00Z'},
-  embed:{external:{title:'Introducing AI Agent',description:'Agent API update',uri:'https://example.com/ai?utm_source=bluesky',thumb:'https://example.com/thumb.png'}},likeCount:12
+  record:{text:'New ChatGPT Agent https://example.com/ai',createdAt:'2026-10-06T10:00:00Z'},
+  embed:{external:{title:'Introducing ChatGPT Agent',description:'Agent feature update',uri:'https://example.com/ai?utm_source=bluesky',thumb:'https://example.com/thumb.png'}},likeCount:12
 };
 const mastodonSource = {...source,sourceType:'mastodon',instance:'https://social.example'};
-const mastodonPost = {id:'123',created_at:'2026-10-06T10:00:00Z',visibility:'public',url:'https://social.example/@author/123',content:'<p>AI Agent API update <script>bad()</script><a href="https://example.com/ai">Read</a></p>'};
+const mastodonPost = {id:'123',created_at:'2026-10-06T10:00:00Z',visibility:'public',url:'https://social.example/@author/123',content:'<p>ChatGPT Agent new features <script>bad()</script><a href="https://example.com/ai">Read</a></p>'};
 
 test('Bluesky: normalize own public posts, embeds and metrics; omit replies and reposts',() => {
   const items = parseBluesky({feed:[{post},{post,reason:{$type:'repost'}},{post:{...post,record:{...post.record,reply:{}}}},{post:{...post,author:{...post.author,handle:'other.example'}}},{post:{...post,uri:'javascript:bad'}}]},source,now);
@@ -56,7 +56,7 @@ test('Adapters use public endpoints without Authorization and isolate partial HN
     if (url.includes('accounts/lookup')) return Response.json({id:'123'});
     if (url.includes('/statuses')) return Response.json([mastodonPost]);
     if (url.includes('topstories.json')) return Response.json([1,2]);
-    if (url.includes('item/1.json')) return Response.json({id:1,type:'story',title:'AI models',url:'https://example.com/hn',time:Math.floor(now/1000)});
+    if (url.includes('item/1.json')) return Response.json({id:1,type:'story',title:'New Gemini app features',url:'https://example.com/hn',time:Math.floor(now/1000)});
     return new Response('failed',{status:503});
   };
   const result = await collectFeed(config,{fetchImpl,now});
@@ -92,13 +92,13 @@ test('Duplicate shared links keep the official original; feed retains less proli
   assert.ok(limited.some(item => item.sourceType === 'bluesky'));
 });
 
-test('Today preserves official coverage when community articles are numerous',() => {
+test('Today ranks useful information rather than reserving three official slots',() => {
   const social = parseBluesky({feed:[{post}]},source,now)[0];
   const items = Array.from({length:20},(_,index) => ({...social,id:String(index),sourceFamily:`Community ${index}`,importanceScore:71}));
   for (let index=0;index<3;index++) items.push({...social,id:`official-${index}`,sourceType:'official',sourceFamily:`Publisher ${index}`,importanceScore:70});
   const today = selectToday(items,{sources:{},interests:[]},now);
   assert.equal(today.length,5);
-  assert.equal(today.filter(item => item.sourceType === 'official').length,3);
+  assert.equal(today.filter(item => item.sourceType === 'official').length,0);
   assert.equal(selectToday(items,{sources:{bluesky:false},interests:[]},now).length,3);
 });
 

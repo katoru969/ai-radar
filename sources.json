@@ -6,18 +6,22 @@
   ],
   "anthropic": [{"id":"anthropic","name":"Anthropic","family":"Anthropic","url":"https://www.anthropic.com/news","sourceType":"official"}],
   "github": [
-    {"id":"openai-python","name":"openai-python","family":"OpenAI","url":"https://github.com/openai/openai-python/releases.atom","sourceType":"github"},
-    {"id":"anthropic-sdk","name":"anthropic-sdk-python","family":"Anthropic","url":"https://github.com/anthropics/anthropic-sdk-python/releases.atom","sourceType":"github"}
+    {"id":"openai-python","name":"openai-python","family":"OpenAI","url":"https://github.com/openai/openai-python/releases.atom","sourceType":"github","enabled":false},
+    {"id":"anthropic-sdk","name":"anthropic-sdk-python","family":"Anthropic","url":"https://github.com/anthropics/anthropic-sdk-python/releases.atom","sourceType":"github","enabled":false}
   ],
   "note": [{"id":"note-official","name":"note公式","family":"note","handle":"info","aiOnly":true}],
-  "youtube": [{"id":"youtube-openai","name":"OpenAI YouTube","family":"OpenAI","channelId":"UCXZCJLdBC09xxGZ6gcdrc6A"}],
+  "youtube": [
+    {"id":"youtube-openai","name":"OpenAI YouTube","family":"OpenAI","channelId":"UCXZCJLdBC09xxGZ6gcdrc6A","channelUrl":"https://www.youtube.com/@OpenAI/videos"},
+    {"id":"youtube-mikimiki","name":"mikimiki web スクール","family":"mikimiki","channelId":"UChxtIA33ty53Hh4MmkXNASg","channelUrl":"https://www.youtube.com/@mikimikiweb/videos","aiOnly":true},
+    {"id":"youtube-keito","name":"KEITO · AI&WEB","family":"KEITO","channelId":"UCfapRkagDtoQEkGeyD3uERQ","channelUrl":"https://www.youtube.com/@keitoaiweb/videos","aiOnly":true}
+  ],
   "zenn": [
-    {"id":"zenn-llm","name":"Zenn · LLM","family":"Zenn","topic":"llm","aiOnly":true},
-    {"id":"zenn-mcp","name":"Zenn · MCP","family":"Zenn","topic":"mcp","aiOnly":true}
+    {"id":"zenn-chatgpt","name":"Zenn · ChatGPT","family":"Zenn","topic":"chatgpt","aiOnly":true},
+    {"id":"zenn-gemini","name":"Zenn · Gemini","family":"Zenn","topic":"gemini","aiOnly":true}
   ],
   "qiita": [
-    {"id":"qiita-ai","name":"Qiita · AI","family":"Qiita","tag":"ai","aiOnly":true},
-    {"id":"qiita-genai","name":"Qiita · 生成AI","family":"Qiita","tag":"生成ai","aiOnly":true}
+    {"id":"qiita-chatgpt","name":"Qiita · ChatGPT","family":"Qiita","tag":"chatgpt","aiOnly":true},
+    {"id":"qiita-gemini","name":"Qiita · Gemini","family":"Qiita","tag":"gemini","aiOnly":true}
   ],
   "bluesky": [{"id":"bluesky-simon","name":"Simon Willison · Bluesky","family":"Simon Willison","actor":"simonwillison.net","aiOnly":true,"limit":30}],
   "hackernews": [{"id":"hackernews-top","name":"Hacker News","family":"Hacker News","aiOnly":true,"limit":40}],

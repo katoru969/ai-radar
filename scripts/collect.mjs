@@ -15,5 +15,5 @@ const collected = await collectFeed(config,{previous:sourceCacheFromSnapshot(pre
 const snapshot = sanitizeSnapshot(preserveSnapshotOnFailure(collected,previous));
 await fs.mkdir(directory,{recursive:true});
 await fs.writeFile(path,`${JSON.stringify(snapshot,null,2)}\n`);
-console.log(JSON.stringify({generatedAt:snapshot.generatedAt,articles:snapshot.articles.length,sources:snapshot.sources.map(source => ({name:source.name,status:source.status,count:source.count})),paidAiCalls:0},null,2));
+console.log(JSON.stringify({generatedAt:snapshot.generatedAt,articles:snapshot.articles.length,japaneseBodies:snapshot.articles.filter(article => article.summaryBasis === 'article').length,videos:snapshot.articles.filter(article => article.sourceType === 'youtube').length,sources:snapshot.sources.map(source => ({name:source.name,status:source.status,count:source.count,method:source.retrievalMethod,...(source.error ? {error:source.error} : {}),...(source.recoveryReason ? {recoveredFrom:source.recoveryReason} : {})})),paidAiCalls:0},null,2));
 if (!snapshot.articles.length) process.exitCode = 1;
