@@ -1,0 +1,25 @@
+{
+  "rss": [
+    {"id":"openai","name":"OpenAI","family":"OpenAI","url":"https://openai.com/news/rss.xml","sourceType":"official"},
+    {"id":"google-ai","name":"Google AI","family":"Google","url":"https://blog.google/innovation-and-ai/technology/ai/rss/","sourceType":"official"},
+    {"id":"google-japan","name":"Google Japan","family":"Google","url":"https://blog.google/intl/ja-jp/rss/","sourceType":"official","aiOnly":true}
+  ],
+  "anthropic": [{"id":"anthropic","name":"Anthropic","family":"Anthropic","url":"https://www.anthropic.com/news","sourceType":"official"}],
+  "github": [
+    {"id":"openai-python","name":"openai-python","family":"OpenAI","url":"https://github.com/openai/openai-python/releases.atom","sourceType":"github"},
+    {"id":"anthropic-sdk","name":"anthropic-sdk-python","family":"Anthropic","url":"https://github.com/anthropics/anthropic-sdk-python/releases.atom","sourceType":"github"}
+  ],
+  "note": [{"id":"note-official","name":"note公式","family":"note","handle":"info","aiOnly":true}],
+  "youtube": [{"id":"youtube-openai","name":"OpenAI YouTube","family":"OpenAI","channelId":"UCXZCJLdBC09xxGZ6gcdrc6A"}],
+  "zenn": [
+    {"id":"zenn-llm","name":"Zenn · LLM","family":"Zenn","topic":"llm","aiOnly":true},
+    {"id":"zenn-mcp","name":"Zenn · MCP","family":"Zenn","topic":"mcp","aiOnly":true}
+  ],
+  "qiita": [
+    {"id":"qiita-ai","name":"Qiita · AI","family":"Qiita","tag":"ai","aiOnly":true},
+    {"id":"qiita-genai","name":"Qiita · 生成AI","family":"Qiita","tag":"生成ai","aiOnly":true}
+  ],
+  "bluesky": [{"id":"bluesky-simon","name":"Simon Willison · Bluesky","family":"Simon Willison","actor":"simonwillison.net","aiOnly":true,"limit":30}],
+  "hackernews": [{"id":"hackernews-top","name":"Hacker News","family":"Hacker News","aiOnly":true,"limit":40}],
+  "mastodon": [{"id":"mastodon-simon","name":"Simon Willison · Mastodon","family":"Simon Willison","instance":"https://fedi.simonwillison.net","account":"simon","accountId":"109276369291252172","aiOnly":true}]
+}

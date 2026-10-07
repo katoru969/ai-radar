@@ -1,0 +1,57 @@
+name: Collect AI news and publish PWA
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    # 仮設定: 毎朝07:17 JST。GitHubの定時実行には遅延があり得ます。
+    - cron: '17 22 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-radar-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Collect free public feeds
+        run: npm run collect
+        env:
+          PREVIOUS_FEED_URL: ${{ steps.pages.outputs.base_url }}/data/feed.json
+      - run: npm run build:pages
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+          retention-days: 1
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish PWA
+        id: deployment
+        uses: actions/deploy-pages@v4
