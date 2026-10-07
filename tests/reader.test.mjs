@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readerFit,selectToday,normalizePreferences,deduplicateArticles} from '../shared.js';
 import {extractJapaneseBody,extractiveSummary,enrichReaderArticles,allowedBodyUrl} from '../lib/reader-summary.mjs';
 import {embeddedJson,channelVideoIds,parseWatchPage,collectYouTubeSource} from '../lib/youtube.mjs';
-import {parseFeed} from '../lib/feeds.mjs';
-import {fetchText} from '../lib/transport.mjs';
+import {parseFeed,collectSources} from '../lib/feeds.mjs';
+import {fetchText,safeFetchError} from '../lib/transport.mjs';
 import {videoDescription} from '../lib/text.mjs';
-import {sanitizeSnapshot} from '../lib/snapshot.mjs';
+import {sanitizeSnapshot,sourceCacheFromSnapshot} from '../lib/snapshot.mjs';
 
 const now = Date.parse('2026-10-07T12:00:00Z');
 const item = (title,overrides = {}) => ({id:title,title,originalTitle:title,originalSummary:'',source:'Test',sourceId:'test',sourceFamily:'Test',sourceType:'official',url:'https://example.com/article',publishedAt:'2026-10-06T12:00:00Z',importanceScore:90,topics:[],...overrides});
@@ -126,6 +126,29 @@ test('YouTube retries transient RSS failure before returning actual feed data',a
     assert.equal(calls,2); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-rss');
   }
 });
+test('Temporary connection resets retry within the budget and expose only a safe cause',async () => {
+  let calls = 0;
+  const disconnect = new TypeError('Private network details',{cause:{code:'ECONNRESET'}});
+  const text = await fetchText('https://www.youtube.com/watch?v=abcdefghijk',{fetchImpl:async () => {
+    if (++calls === 1) throw disconnect;
+    return new Response('actual public metadata');
+  }});
+  assert.equal(text,'actual public metadata'); assert.equal(calls,2); assert.equal(safeFetchError(disconnect),'connection_reset');
+  calls = 0;
+  await assert.rejects(fetchText('https://www.youtube.com/watch?v=abcdefghijk',{retries:1,fetchImpl:async () => {calls++; throw disconnect;}}));
+  assert.equal(calls,2);
+});
+test('A disconnected response body retries, while an oversized response does not',async () => {
+  let calls = 0;
+  assert.equal(await fetchText('https://www.youtube.com/watch?v=abcdefghijk',{fetchImpl:async () => {
+    if (++calls > 1) return new Response('complete');
+    return new Response(new ReadableStream({start(controller) {controller.error(new TypeError('terminated',{cause:{code:'UND_ERR_SOCKET'}}));}}));
+  }}),'complete');
+  assert.equal(calls,2);
+  calls = 0;
+  await assert.rejects(fetchText('https://www.youtube.com/watch?v=abcdefghijk',{maxBytes:4,fetchImpl:async () => {calls++; return new Response('too large');}}),/response_too_large/);
+  assert.equal(calls,1);
+});
 test('Persistent RSS error recovers using public pages without a key, authentication or invented dates',async () => {
   const urls = [];
   const result = await collectYouTubeSource(ytSource,{parseFeed,now,fetchImpl:async (url,options) => {
@@ -134,6 +157,22 @@ test('Persistent RSS error recovers using public pages without a key, authentica
     return new Response(url.includes('/watch?') ? watchHtml(player()) : channelHtml({videoRenderer:{videoId}}));
   }});
   assert.equal(urls.filter(url => url.includes('/feeds/')).length,5); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-page'); assert.equal(result.recoveryReason,'http_500'); assert.equal(result.articles[0].publishedAt,'2026-10-06T03:00:00.000Z');
+});
+test('Partial video retrieval retains recent saved videos without renewing the cache age',async () => {
+  const cachedAt = new Date(now - 3 * 3600000).toISOString();
+  const fresh = parseWatchPage(watchHtml(player()),videoId,ytSource,now);
+  const saved = {...item('ChatGPTの活用方法'),id:'saved-video',sourceId:ytSource.id,sourceType:'youtube'};
+  const previous = new Map([[ytSource.id,{articles:[saved,fresh],fetchedAt:cachedAt}]]);
+  const result = await collectSources({youtube:[ytSource]},{now,previous,fetchImpl:async url => {
+    if (url.includes('/feeds/')) return new Response(null,{status:404});
+    if (url.includes('/watch?')) return url.endsWith(videoId) ? new Response(watchHtml(player())) : new Response(null,{status:503});
+    return new Response(channelHtml({contents:[{videoRenderer:{videoId}},{videoRenderer:{videoId:'zzzzzzzzzzz'}}]}));
+  }});
+  assert.equal(result.articles.length,2); assert.equal(result.sources[0].status,'partial'); assert.equal(result.sources[0].cachedCount,1);
+  const snapshot = sanitizeSnapshot({articles:result.articles,sources:result.sources});
+  assert.equal(snapshot.sources[0].cachedFetchedAt,cachedAt);
+  assert.equal(sourceCacheFromSnapshot(snapshot).get(ytSource.id).fetchedAt,cachedAt);
+  assert.equal(result.articles.find(article => article.id === saved.id).publishedAt,saved.publishedAt);
 });
 test('Published snapshot preserves detailed summary and safe diagnostics while dropping body and secrets',() => {
   const snapshot = sanitizeSnapshot({articles:[{...item('ChatGPTの新機能'),detailedSummary:paragraphs.join(''),summaryBasis:'article',summaryState:'ready',summaryMode:'extractive',body: 'private body should not be published',apiKey:'private secret'}],sources:[{id:'yt',name:'Creator',sourceType:'youtube',status:'ok',count:1,retrievalMethod:'youtube-page',recoveryReason:'http_500',error:'secret token'}]});
