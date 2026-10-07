@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-export const assets = ['index.html','app.js','styles.css','shared.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png'];
+export const assets = ['index.html','app.js','styles.css','shared.js','article-details.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png'];
 const root = new URL('../', import.meta.url), publicDir = new URL('../public/', import.meta.url);
 await fs.mkdir(publicDir, {recursive:true});
 for (const name of assets) await fs.copyFile(new URL(name, root), new URL(name, publicDir));

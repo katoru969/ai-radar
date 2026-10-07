@@ -84,7 +84,7 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const pool = recent.length >= 3 ? recent : candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
   const readable = pool.filter(article => !article.summaryBasis || article.summaryBasis !== 'unavailable');
   const readingPool = readable.length >= 3 ? readable : pool;
-  const rank = article => article.importanceScore + readerFit(article).priority + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length * 3 + (article.summaryBasis === 'article' ? 4 : 0) - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 2;
+  const rank = article => article.importanceScore + readerFit(article).priority + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length * 3 + (['article','video-transcript'].includes(article.summaryBasis) ? 4 : 0) - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 2;
   const ranked = [...readingPool].sort((a, b) => rank(b) - rank(a) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
   const selected = [], families = new Map();
   const add = article => {
@@ -97,7 +97,8 @@ export function selectToday(articles, prefs, now = Date.now()) {
     add(article);
   }
   // 最近の有用な動画がある日は1枠を確保。古い動画で最新ニュースを押し出さない。
-  const video = ranked.find(item => item.sourceType === 'youtube' && now - Date.parse(item.publishedAt) <= 7 * 24 * HOUR);
+  const videos = ranked.filter(item => item.sourceType === 'youtube' && now - Date.parse(item.publishedAt) <= 7 * 24 * HOUR);
+  const video = videos.find(item=>item.summaryBasis === 'video-transcript') || videos[0];
   if (video && !selected.some(item => item.sourceType === 'youtube')) {
     const family = video.sourceFamily || video.source;
     if ((families.get(family) || 0) < 2) {
