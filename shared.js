@@ -33,7 +33,7 @@ export function readerFit(article) {
   const simpleSetup = /no[- ]?code|without cod|ノーコード|コピペ|初心者|コード不要|簡単な設定/i.test(title);
   if (/next\.?js|react\b|\baws\b|bedrock|vertex ai|cloud run|kubernetes|mathlib|\blean\b|個人開発|フロントエンド|バックエンド|インフラ|環境構築|型エラー/i.test(title)) return {eligible:false,category:'',reason:'開発環境・実装向け',priority:0};
   if (/mentalhealthbench|benchmark|\bbench\b|system card|model card|safety overview|quantum|enzyme|crispr|研究チーム|研究成果|未解決問題|形式証明|数学.*証明|量子|酵素/i.test(`${title} ${excerpt.slice(0,200)}`)) return {eligible:false,category:'',reason:'研究・性能検証が中心',priority:0};
-  const engineering = /\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|開発者|エンジニア|claude code|codex/i.test(title);
+  const engineering = /\bapi\b|\bsdk\b|\bcli\b|\bcoding\b|\bdevelopers?\b|\bengineering\b|\barchitecture\b|\bimplementation\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|開発者|エンジニア|claude code|codex/i.test(title);
   if (engineering && !simpleSetup) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
   const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価)/i.test(excerpt);
   if (developerAudience && !simpleSetup) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};

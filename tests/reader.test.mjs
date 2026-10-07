@@ -21,6 +21,7 @@ test('Reader policy rejects engineering, corporate announcements and description
   assert.equal(readerFit(item('Claude、Gemini、GPTが更新',{detailedSummary:'長いコーディングに対応し、Claude Codeのコードレビュー性能とベンチマークを検証します。'})).eligible,false);
   assert.equal(readerFit(item('MemoryTale の画像を Nano Banana に、読み上げを Gemini TTS にした',{detailedSummary:'モデルを交換する開発の話です。Gemini API の追加利用規約に合わせてサービスの対象年齢を変更しました。'})).eligible,false);
   for (const title of ['Gemini TTS × Voice Conversionを4構成で比較','How to connect AI usage to business value','Create with AI: 大学とAIを活用した創作活動を支援']) assert.equal(readerFit(item(title)).eligible,false,title);
+  for (const title of ['New TIL on using Blender with coding agents on macOS: GPT-6','New Gemini features for developers','Claude engineering architecture']) assert.equal(readerFit(item(title,{sourceType:'bluesky'})).eligible,false,title);
   for (const title of ['【個人開発】URLを要約するツールを作った（Next.js / Gemini）','Claude DesktopをAmazon Bedrock経由で使う','ChatGPT・Leanと学ぶ形式証明','GPTが量子実験を支援','Claude discovers a novel enzyme system with CRISPR-like repeats','Airbnb widens access to GPT-6','Higgsfield ships features with GPT-6']) assert.equal(readerFit(item(title,{sourceType:'official'})).eligible,false,title);
 });
 test('Today filters legacy cached engineering articles and includes a recent useful video',() => {
