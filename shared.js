@@ -31,19 +31,27 @@ export function readerFit(article) {
   const product = /chatgpt|claude|gemini|notebook\s?lm|sora|canva|copilot|perplexity|midjourney|gpt[- ]?\d/i.test(title);
   const howTo = /how (?:to|i)|guide|tips|tutorial|prompt|使い方|活用|手順|設定|コツ|入門|初心者|プロンプト|試して|使って|やり方|できること|使える|方法|比較|選び方|時短|徹底解説/i.test(title);
   const simpleSetup = /no[- ]?code|without cod|ノーコード|コピペ|初心者|コード不要|簡単な設定/i.test(title);
-  const engineering = /\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|開発者|エンジニア|claude code|codex/i.test(title);
+  if (/next\.?js|react\b|\baws\b|bedrock|vertex ai|cloud run|kubernetes|mathlib|\blean\b|個人開発|フロントエンド|バックエンド|インフラ|環境構築|型エラー/i.test(title)) return {eligible:false,category:'',reason:'開発環境・実装向け',priority:0};
+  if (/mentalhealthbench|benchmark|\bbench\b|system card|model card|safety overview|quantum|enzyme|crispr|研究チーム|研究成果|未解決問題|形式証明|数学.*証明|量子|酵素/i.test(`${title} ${excerpt.slice(0,200)}`)) return {eligible:false,category:'',reason:'研究・性能検証が中心',priority:0};
+  const engineering = /\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|開発者|エンジニア|claude code|codex/i.test(title);
   if (engineering && !simpleSetup) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
-  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価)/i.test(excerpt);
+  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価)/i.test(excerpt);
   if (developerAudience && !simpleSetup) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};
   const technicalMentions = excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || [];
   if (technicalMentions.length >= 3 && !simpleSetup) return {eligible:false,category:'',reason:'本文の中心が開発・性能検証',priority:0};
-  if (/partner|verification program|funding|acquisit|enterprise|quant research|life sciences|training.*engineers|sponsor|keynote|summit|conference|case study|partnership|customer stor|\bads\b|advertis|\bscales?\b.*(?:claude|chatgpt)|^how (?!to\b).+ with (?:chatgpt|claude)|frees up.*grow with|completes?.*faster with|turns legal context|提携|資金調達|買収|企業向け|法人向け|導入事例|広告出稿|登壇|イベント開催|受賞|採用情報/i.test(title)) return {eligible:false,category:'',reason:'個人の利用に直結しない発表',priority:0};
+  if (/partner|verification program|funding|acquisit|enterprise|quant research|life sciences|training.*engineers|sponsor|keynote|summit|conference|case study|partnership|customer stor|for financial services|business value|usage analytics|\bads\b|advertis|prompt caching|online storage|end-to-end systems|\bscales?\b.*(?:claude|chatgpt)|^how (?!to\b).+ with (?:chatgpt|claude|gpt)|frees up.*grow with|completes?.*faster with|turns legal context|提携|資金調達|買収|企業向け|法人向け|導入事例|広告出稿|登壇|イベント開催|コンテスト|受賞|採用情報|(?:大学|機関).*(?:連携|支援)/i.test(title)) return {eligible:false,category:'',reason:'個人の利用に直結しない発表',priority:0};
   const pricing = /pric|pricing|subscription|\bplans?\b|\bfree\b|料金|価格|値上げ|値下げ|無料|有料|プラン|上限|制限/i.test(title);
   const feature = /introduc|meet |launch|release|available|roll.?out|update|\bnew\b|新機能|新モデル|新しい|追加|登場|公開|アップデート|リリース|対応|提供開始|進化/i.test(title);
   const aiUse = /\bai\b|生成AI|人工知能|エージェント|mcp/i.test(title);
+  const consumerUse = /voice|audio|image|video|app\b|using|create|generat|building.*website|running routes|画像|動画|音声|録音|議事録|資料|プロンプト|アプリ|使って|使う|使える|を作|活用|感想|レビュー|比較|impressions/i.test(title);
+  const modelUpdate = /gpt[- ]?\d|gemini\s*\d|claude\s*(?:opus|sonnet|haiku|fable)\s*\d/i.test(title);
+  if (article.sourceType === 'official' && !/[ぁ-んァ-ヶ一-龯]/u.test(title)) {
+    const individualAnnouncement = /^(?:introducing|meet|new|more|a model guide|a guide|how to|what|you|your|chatgpt|claude|gemini|gpt[- ])|\b(?:in|for) (?:chatgpt|the gemini app)/i.test(title) || /users can|chatgpt (?:plus|pro|free)|gemini app/i.test(excerpt);
+    if (!individualAnnouncement) return {eligible:false,category:'',reason:'個人向けの変更・手順が確認できない',priority:0};
+  }
   // タイトルがモデル名だけの発表は、一般利用できる製品への言及も確認する。
   const appAnnouncement = !product && /gpt[- ]?\d|opus|sonnet|haiku/i.test(title) && /chatgpt|claude|gemini.*app/i.test(excerpt) && feature;
-  const eligible = product || appAnnouncement || (aiUse && howTo);
+  const eligible = (product && (pricing || feature || howTo || consumerUse || modelUpdate)) || appAnnouncement || (aiUse && howTo);
   const category = pricing && (product || aiUse) ? '料金・利用条件' : howTo ? '使い方・設定' : feature || appAnnouncement ? '新機能' : '活用情報';
   return {eligible,category:eligible ? category : '',reason:eligible ? primary ? '使っているAIの変更・活用' : '個人で試せるAIの活用' : '具体的な利用方法が確認できない',priority:eligible ? (primary ? 12 : 5) + (pricing ? 8 : feature ? 6 : howTo ? 5 : 0) : 0};
 }

@@ -19,6 +19,9 @@ test('Reader policy rejects engineering, corporate announcements and description
   for (const title of ['openai-python SDK release v2.0','Gemini APIの料金変更','Claude CodeのCLIアーキテクチャ','ChatGPTとRAGの実装','Geminiのベンチマークを検証','Anthropic announces enterprise partnership','How Example is scaling quant research with ChatGPT','ChatGPTのモデル分業で隠しテスト100%だった','Gemini Nano BananaがGA、gemini-3.1-flash-imageは終了【移行ガイド】','新しいカメラを買いました']) assert.equal(readerFit(item(title,{originalSummary:'ChatGPT・Claude・Geminiの無料講座はこちら'})).eligible,false,title);
   assert.equal(readerFit(item('Geminiの画像生成が進化',{originalSummary:'Gemini APIの画像編集をアプリやバッチ処理に組み込む開発者向けです。'})).eligible,false);
   assert.equal(readerFit(item('Claude、Gemini、GPTが更新',{detailedSummary:'長いコーディングに対応し、Claude Codeのコードレビュー性能とベンチマークを検証します。'})).eligible,false);
+  assert.equal(readerFit(item('MemoryTale の画像を Nano Banana に、読み上げを Gemini TTS にした',{detailedSummary:'モデルを交換する開発の話です。Gemini API の追加利用規約に合わせてサービスの対象年齢を変更しました。'})).eligible,false);
+  for (const title of ['Gemini TTS × Voice Conversionを4構成で比較','How to connect AI usage to business value','Create with AI: 大学とAIを活用した創作活動を支援']) assert.equal(readerFit(item(title)).eligible,false,title);
+  for (const title of ['【個人開発】URLを要約するツールを作った（Next.js / Gemini）','Claude DesktopをAmazon Bedrock経由で使う','ChatGPT・Leanと学ぶ形式証明','GPTが量子実験を支援','Claude discovers a novel enzyme system with CRISPR-like repeats','Airbnb widens access to GPT-6','Higgsfield ships features with GPT-6']) assert.equal(readerFit(item(title,{sourceType:'official'})).eligible,false,title);
 });
 test('Today filters legacy cached engineering articles and includes a recent useful video',() => {
   const items = Array.from({length:8},(_,index) => item(`ChatGPTの新機能 ${index}`,{id:String(index),sourceFamily:`Official ${index}`}));
@@ -29,7 +32,7 @@ test('Today filters legacy cached engineering articles and includes a recent use
   assert.ok(!selectToday(items,{sources:{youtube:false},interests:[]},now).some(article => article.id === 'video'));
 });
 test('Today shows four readable articles rather than padding with an English-only item',() => {
-  const articles = Array.from({length:4},(_,index) => item(`ChatGPTの機能 ${index}`,{sourceFamily:String(index),summaryBasis:'article'}));
+  const articles = Array.from({length:4},(_,index) => item(`ChatGPTの新機能 ${index}`,{sourceFamily:String(index),summaryBasis:'article'}));
   articles.push(item('New Claude feature',{sourceFamily:'English',summaryBasis:'unavailable',importanceScore:100}));
   const today = selectToday(articles,{sources:{},interests:[]},now);
   assert.equal(today.length,4); assert.ok(today.every(article => article.summaryBasis === 'article'));
@@ -57,6 +60,11 @@ test('Japanese body extraction excludes navigation, scripts and promotional para
   const body = extractJapaneseBody(html,'https://blog.google/intl/ja-jp/test/');
   assert.ok(body); assert.ok(body.body.includes(paragraphs[2])); assert.doesNotMatch(body.body,/メニュー|公式LINE|secret|ログイン/);
   assert.equal(extractJapaneseBody(`<nav>${paragraphs.join('')}</nav><article><p>${'This article is only in English. '.repeat(100)}</p></article>`,'https://blog.google/test'),null);
+});
+test('Formal article title wins over a body heading called はじめに',() => {
+  const html = `<meta property="og:title" content="ChatGPTで資料を整理する方法 | Zenn"><header><h1>ChatGPTで資料を整理する方法</h1></header><article><h1>はじめに</h1>${paragraphs.map(text => `<p>${text}</p>`).join('')}</article>`;
+  assert.equal(extractJapaneseBody(html,'https://zenn.dev/test/articles/test').title,'ChatGPTで資料を整理する方法');
+  assert.equal(extractJapaneseBody(`<article><h1>はじめに</h1>${paragraphs.map(text => `<p>${text}</p>`).join('')}</article>`,'https://zenn.dev/test/articles/test').title,'');
 });
 test('Overview and substantive summary retain source facts and never create unavailable dates/prices',() => {
   const result = extractiveSummary(paragraphs.join('\n'));
