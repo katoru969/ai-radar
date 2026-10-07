@@ -71,7 +71,7 @@ function sourceErrorLabel(source) {
 }
 function sourceStateHtml(source) {
   const label = {ok:`${source.count}件取得`,empty:'新着なし',error:'取得失敗',cached:'保存分を表示',partial:`${source.count}件・一部取得失敗`}[source.status] || '確認中';
-  return `${label}${source.error ? `<small>${esc(sourceErrorLabel(source))}</small>` : source.recoveryReason ? '<small>RSSの配信エラーから復旧・公開ページで取得</small>' : ''}`;
+  return `${label}${source.error ? `<small>${esc(sourceErrorLabel(source))}</small>` : source.recoveryReason ? `<small>RSSの配信エラーから復旧・${source.retrievalMethod === 'youtube-page' ? '公開ページで取得' : '再取得に成功'}</small>` : ''}`;
 }
 function renderToday() {
   const top = selectToday(feed.articles,prefs);

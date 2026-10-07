@@ -103,11 +103,20 @@ test('Watch metadata uses genuine publication date and rejects other channels or
   assert.equal(parseWatchPage(watchHtml(player({videoDetails:{...player().videoDetails,channelId:'UCother'}})),videoId,ytSource,now),null);
   for (const date of ['', '2026-10-08T12:00:00Z']) assert.equal(parseWatchPage(watchHtml(player({microformat:{playerMicroformatRenderer:{publishDate:date}}})),videoId,ytSource,now),null);
 });
+test('Public HTML metadata recovers when player JSON is absent, with channel and date validation',() => {
+  const html = `<link rel="canonical" href="https://www.youtube.com/watch?v=${videoId}"><meta itemprop="channelId" content="${channelId}"><meta itemprop="datePublished" content="2026-10-06"><meta property="og:title" content="ChatGPTの新機能"><meta property="og:description" content="ChatGPTの使い方を紹介します。">`;
+  const article = parseWatchPage(html,videoId,ytSource,now);
+  assert.equal(article.publishedAt,'2026-10-06T00:00:00.000Z'); assert.equal(article.publishedAtPrecision,'day');
+  assert.equal(parseWatchPage(html.replace(channelId,'UCother'),videoId,ytSource,now),null);
+  assert.equal(parseWatchPage(html.replace('2026-10-06','2026-10-08'),videoId,ytSource,now),null);
+});
 test('YouTube retries transient RSS failure before returning actual feed data',async () => {
-  let calls = 0;
   const rss = `<feed><entry><title>ChatGPTの新機能</title><link href="https://www.youtube.com/watch?v=${videoId}"/><published>2026-10-06T12:00:00Z</published></entry></feed>`;
-  const result = await collectYouTubeSource(ytSource,{parseFeed,now,fetchImpl:async () => ++calls === 1 ? new Response(null,{status:500}) : new Response(rss)});
-  assert.equal(calls,2); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-rss');
+  for (const status of [404,500]) {
+    let calls = 0;
+    const result = await collectYouTubeSource(ytSource,{parseFeed,now,fetchImpl:async () => ++calls === 1 ? new Response(null,{status}) : new Response(rss)});
+    assert.equal(calls,2); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-rss');
+  }
 });
 test('Persistent RSS error recovers using public pages without a key, authentication or invented dates',async () => {
   const urls = [];
@@ -116,7 +125,7 @@ test('Persistent RSS error recovers using public pages without a key, authentica
     if (url.includes('/feeds/')) return new Response(null,{status:500});
     return new Response(url.includes('/watch?') ? watchHtml(player()) : channelHtml({videoRenderer:{videoId}}));
   }});
-  assert.equal(urls.filter(url => url.includes('/feeds/')).length,3); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-page'); assert.equal(result.recoveryReason,'http_500'); assert.equal(result.articles[0].publishedAt,'2026-10-06T03:00:00.000Z');
+  assert.equal(urls.filter(url => url.includes('/feeds/')).length,5); assert.equal(result.articles.length,1); assert.equal(result.retrievalMethod,'youtube-page'); assert.equal(result.recoveryReason,'http_500'); assert.equal(result.articles[0].publishedAt,'2026-10-06T03:00:00.000Z');
 });
 test('Published snapshot preserves detailed summary and safe diagnostics while dropping body and secrets',() => {
   const snapshot = sanitizeSnapshot({articles:[{...item('ChatGPTの新機能'),detailedSummary:paragraphs.join(''),summaryBasis:'article',summaryState:'ready',summaryMode:'extractive',body: 'private body should not be published',apiKey:'private secret'}],sources:[{id:'yt',name:'Creator',sourceType:'youtube',status:'ok',count:1,retrievalMethod:'youtube-page',recoveryReason:'http_500',error:'secret token'}]});
