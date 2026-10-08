@@ -77,13 +77,13 @@ test('Timeout cannot keep a feed request pending indefinitely',async () => {
   const keepAlive = setTimeout(() => {},100);
   try {await assert.rejects(() => fetchText(source.url,{fetchImpl,timeoutMs:10}),/timeout/);} finally {clearTimeout(keepAlive);}
 });
-test('Today: 3–5 useful recent articles, source switches, publisher variety and no SDK releases',() => {
+test('Today: up to ten useful recent articles, source switches, publisher variety and no SDK releases',() => {
   const items = Array.from({length:8},(_,index) => ({...article({url:`https://example.com/${index}`}), id:String(index),source:`Source ${index}`,sourceFamily:`Family ${index}`,importanceScore:80 + index}));
   items.push({...items[0],id:'old',importanceScore:100,publishedAt:'2026-08-01T00:00:00Z'});
   items.push({...items[0],id:'new-release',originalTitle:'openai-python SDK release v2',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:90});
   items.push({...items[0],id:'old-release',originalTitle:'openai-python SDK release v1',sourceType:'github',source:'sdk',sourceFamily:'sdk',importanceScore:99,publishedAt:'2026-10-03T00:00:00Z'});
   const selected = selectToday(items,{sources:{},interests:[]},now);
-  assert.equal(selected.length,5); assert.ok(!selected.some(item => ['old','old-release'].includes(item.id)));
+  assert.equal(selected.length,8); assert.ok(!selected.some(item => ['old','old-release'].includes(item.id)));
   assert.ok(!selected.some(item => item.id === 'new-release'));
   assert.ok(selectToday(items,{sources:{official:false,github:false},interests:[]},now).length === 0);
   assert.ok(selectToday(items.slice(0,2),{sources:{},interests:[]},now).length === 2);

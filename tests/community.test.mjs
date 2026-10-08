@@ -97,7 +97,7 @@ test('Today ranks useful information rather than reserving three official slots'
   const items = Array.from({length:20},(_,index) => ({...social,id:String(index),sourceFamily:`Community ${index}`,importanceScore:71}));
   for (let index=0;index<3;index++) items.push({...social,id:`official-${index}`,sourceType:'official',sourceFamily:`Publisher ${index}`,importanceScore:70});
   const today = selectToday(items,{sources:{},interests:[]},now);
-  assert.equal(today.length,5);
+  assert.equal(today.length,10);
   assert.equal(today.filter(item => item.sourceType === 'official').length,0);
   assert.equal(selectToday(items,{sources:{bluesky:false},interests:[]},now).length,3);
 });

@@ -1,7 +1,7 @@
 const BASE = new URL('./',self.location.href);
 const PREFIX = `ai-radar-${encodeURIComponent(BASE.pathname)}-`;
-const CACHE = `${PREFIX}v1.3.1-refresh-20261008`;
-const FILES = ['','index.html','styles.css','app.js','shared.js','article-details.js','feed-refresh.js','terms.js','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png'];
+const CACHE = `${PREFIX}v1.4.0-reading-20261008`;
+const FILES = ['','index.html','styles.css','app.js','shared.js','article-details.js','feed-refresh.js','article-state.js','terms.js','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png'];
 const ASSETS = FILES.map(name => new URL(name,BASE).href);
 const FEED_URL = new URL('data/feed.json',BASE);
 const PATHS = new Set([...ASSETS.map(url => new URL(url).pathname),FEED_URL.pathname]);

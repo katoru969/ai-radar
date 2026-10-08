@@ -16,6 +16,7 @@ export function normalizePreferences(saved = {}) {
   };
 }
 export const HOUR = 3600000;
+export const TODAY_LIMIT = 10;
 export const safeUrl = value => {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : ''; }
   catch { return ''; }
@@ -35,7 +36,7 @@ export function readerFit(article) {
   if (/mentalhealthbench|benchmark|\bbench\b|system card|model card|safety overview|quantum|enzyme|crispr|研究チーム|研究成果|未解決問題|形式証明|数学.*証明|量子|酵素/i.test(`${title} ${excerpt.slice(0,200)}`)) return {eligible:false,category:'',reason:'研究・性能検証が中心',priority:0};
   const engineering = /\bapi\b|\bsdk\b|\bcli\b|\bcoding\b|\bdevelopers?\b|\bengineering\b|\barchitecture\b|\bimplementation\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|リファクタ|デバッグ|コード(?:生成|修正|レビュー)|開発者|エンジニア|claude code|codex/i.test(title);
   if (engineering && !simpleSetup) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
-  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン)/i.test(excerpt);
+  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン|vertex ai|thinking_level|サンプリングパラメータ|sympy|Line\.equation)/i.test(excerpt);
   if (developerAudience && !simpleSetup) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};
   const technicalMentions = excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || [];
   if (technicalMentions.length >= 3 && !simpleSetup) return {eligible:false,category:'',reason:'本文の中心が開発・性能検証',priority:0};
@@ -79,9 +80,10 @@ export function deduplicateArticles(articles) {
   });
 }
 export function selectToday(articles, prefs, now = Date.now()) {
-  const candidates = articles.filter(article => prefs.sources[article.sourceType] !== false && readerFit(article).eligible && Number.isFinite(Date.parse(article.publishedAt)) && Date.parse(article.publishedAt) <= now + 5 * 60000);
+  const understood = new Set(prefs.understoodArticleIds || []);
+  const candidates = articles.filter(article => !understood.has(article.id) && prefs.sources[article.sourceType] !== false && readerFit(article).eligible && Number.isFinite(Date.parse(article.publishedAt)) && Date.parse(article.publishedAt) <= now + 5 * 60000);
   const recent = candidates.filter(article => now - Date.parse(article.publishedAt) <= 7 * 24 * HOUR);
-  const pool = recent.length >= 3 ? recent : candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
+  const pool = recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
   const readable = pool.filter(article => !article.summaryBasis || article.summaryBasis !== 'unavailable');
   const readingPool = readable.length >= 3 ? readable : pool;
   const rank = article => article.importanceScore + readerFit(article).priority + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length * 3 + (['article','video-transcript'].includes(article.summaryBasis) ? 4 : 0) - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 2;
@@ -89,17 +91,17 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const selected = [], families = new Map();
   const add = article => {
     const family = article.sourceFamily || article.source;
-    if (selected.length >= 5 || selected.includes(article) || (families.get(family) || 0) >= 2) return;
+    if (selected.length >= TODAY_LIMIT || selected.includes(article) || (families.get(family) || 0) >= 3) return;
     selected.push(article); families.set(family, (families.get(family) || 0) + 1);
   };
-  // 新着の実用記事を最大3枠確保。昨日の高得点記事だけでTodayが固定されるのを防ぐ。
+  // 最大10件。新着の実用記事を最大6枠確保し、理解済みは候補に戻さない。
   const fresh = ranked.filter(article => isFreshArticle(article,now));
   for (const article of fresh) {
-    if (selected.length === 3) break;
+    if (selected.length === 6) break;
     add(article);
   }
   for (const article of ranked) {
-    if (selected.length === 5) break;
+    if (selected.length === TODAY_LIMIT) break;
     add(article);
   }
   // 新着を押し出さず、直近48時間の動画だけ1枠を確保。新着がなければ7日まで。
@@ -108,16 +110,16 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const video = videos.find(item=>item.summaryBasis === 'video-transcript') || videos[0];
   if (video && !selected.some(item => item.sourceType === 'youtube')) {
     const family = video.sourceFamily || video.source;
-    if ((families.get(family) || 0) < 2) {
+    if ((families.get(family) || 0) < 3) {
       const replace = selected.findLastIndex(article => isFreshArticle(video,now) || !isFreshArticle(article,now));
-      if (selected.length < 5 || replace >= 0) {
-        if (selected.length === 5) {const [removed] = selected.splice(replace,1); const removedFamily = removed.sourceFamily || removed.source; families.set(removedFamily,families.get(removedFamily) - 1);}
+      if (selected.length < TODAY_LIMIT || replace >= 0) {
+        if (selected.length === TODAY_LIMIT) {const [removed] = selected.splice(replace,1); const removedFamily = removed.sourceFamily || removed.source; families.set(removedFamily,families.get(removedFamily) - 1);}
         add(video);
       }
     }
   }
   for (const article of ranked) {
-    if (selected.length >= Math.min(3, ranked.length)) break;
+    if (selected.length >= Math.min(TODAY_LIMIT, ranked.length)) break;
     if (!selected.includes(article)) {
       selected.push(article);
     }

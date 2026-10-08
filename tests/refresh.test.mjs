@@ -15,11 +15,11 @@ const article = (id,age,score = 75,overrides = {}) => ({
 const prefs = {sources:{},interests:[]};
 
 test('Today surfaces new practical articles even when yesterday has higher scores and reviewed videos',() => {
-  const old = Array.from({length:5},(_,index) => article(`old-${index}`,48+index,100));
+  const old = Array.from({length:14},(_,index) => article(`old-${index}`,48+index,100));
   old.push(article('old-video',120,100,{sourceType:'youtube',summaryBasis:'video-transcript'}));
   const fresh = ['new-1','new-2','new-3'].map((id,index) => article(id,index+1,72));
   const today = selectToday([...old,...fresh],prefs,now);
-  assert.equal(today.length,5);
+  assert.equal(today.length,10);
   assert.deepEqual(new Set(today.slice(0,3).map(item=>item.id)),new Set(fresh.map(item=>item.id)));
   assert.ok(!today.some(item=>item.id==='old-video'));
 });
@@ -29,8 +29,8 @@ test('Fresh slots respect source switches, publisher variety, practical content 
     article('off',1,100,{sourceType:'note'}),article('missing',1,100,{summaryBasis:'unavailable'}),
     article('old',50,100),article('other',4),article('refactor',1,100,{originalTitle:'AIによるコードリファクタリングの安全な実行手順'})];
   const today=selectToday(items,{...prefs,sources:{note:false}},now);
-  assert.equal(today.length,4);
-  assert.equal(today.filter(item=>item.sourceFamily==='a').length,2);
+  assert.equal(today.length,5);
+  assert.equal(today.filter(item=>item.sourceFamily==='a').length,3);
   assert.ok(['a','b','other'].every(id=>today.some(item=>item.id===id)));
   assert.ok(!today.some(item=>['off','missing','refactor'].includes(item.id)));
   assert.equal(readerFit(items.at(-1)).eligible,false);

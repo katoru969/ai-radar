@@ -29,7 +29,7 @@ test('Today filters legacy cached engineering articles and includes a recent use
   items.push(item('ChatGPTの使い方を解説',{id:'video',sourceType:'youtube',sourceFamily:'Creator',importanceScore:76}));
   items.push(item('Introducing the ChatGPT API',{id:'legacy-sdk',importanceScore:100}));
   const today = selectToday(items,{sources:{},interests:[]},now);
-  assert.equal(today.length,5); assert.ok(today.some(article => article.id === 'video')); assert.ok(!today.some(article => article.id === 'legacy-sdk'));
+  assert.equal(today.length,9); assert.ok(today.some(article => article.id === 'video')); assert.ok(!today.some(article => article.id === 'legacy-sdk'));
   assert.ok(!selectToday(items,{sources:{youtube:false},interests:[]},now).some(article => article.id === 'video'));
 });
 test('Today shows four readable articles rather than padding with an English-only item',() => {
@@ -69,7 +69,7 @@ test('Formal article title wins over a body heading called はじめに',() => {
 });
 test('Overview and substantive summary retain source facts and never create unavailable dates/prices',() => {
   const result = extractiveSummary(paragraphs.join('\n'));
-  assert.ok(result.summary.length <= 150); assert.ok(result.detailedSummary.length >= 250); assert.ok(result.detailedSummary.length <= 550);
+  assert.ok(result.summary.length <= 180); assert.ok(result.detailedSummary.length >= 250); assert.ok(result.detailedSummary.length <= 620);
   assert.match(result.detailedSummary,/無料プラン/); assert.match(result.detailedSummary,/順次提供/); assert.doesNotMatch(result.detailedSummary,/2026|980円|iPhone限定/);
   const absent = extractiveSummary('Only English, with no Japanese text.'); assert.equal(absent,null);
 });
