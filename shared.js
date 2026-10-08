@@ -33,9 +33,9 @@ export function readerFit(article) {
   const simpleSetup = /no[- ]?code|without cod|ノーコード|コピペ|初心者|コード不要|簡単な設定/i.test(title);
   if (/next\.?js|react\b|\baws\b|bedrock|vertex ai|cloud run|kubernetes|mathlib|\blean\b|個人開発|フロントエンド|バックエンド|インフラ|環境構築|型エラー/i.test(title)) return {eligible:false,category:'',reason:'開発環境・実装向け',priority:0};
   if (/mentalhealthbench|benchmark|\bbench\b|system card|model card|safety overview|quantum|enzyme|crispr|研究チーム|研究成果|未解決問題|形式証明|数学.*証明|量子|酵素/i.test(`${title} ${excerpt.slice(0,200)}`)) return {eligible:false,category:'',reason:'研究・性能検証が中心',priority:0};
-  const engineering = /\bapi\b|\bsdk\b|\bcli\b|\bcoding\b|\bdevelopers?\b|\bengineering\b|\barchitecture\b|\bimplementation\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|開発者|エンジニア|claude code|codex/i.test(title);
+  const engineering = /\bapi\b|\bsdk\b|\bcli\b|\bcoding\b|\bdevelopers?\b|\bengineering\b|\barchitecture\b|\bimplementation\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|リファクタ|デバッグ|コード(?:生成|修正|レビュー)|開発者|エンジニア|claude code|codex/i.test(title);
   if (engineering && !simpleSetup) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
-  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価)/i.test(excerpt);
+  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン)/i.test(excerpt);
   if (developerAudience && !simpleSetup) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};
   const technicalMentions = excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || [];
   if (technicalMentions.length >= 3 && !simpleSetup) return {eligible:false,category:'',reason:'本文の中心が開発・性能検証',priority:0};
@@ -89,21 +89,31 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const selected = [], families = new Map();
   const add = article => {
     const family = article.sourceFamily || article.source;
-    if (selected.includes(article) || (families.get(family) || 0) >= 2) return;
+    if (selected.length >= 5 || selected.includes(article) || (families.get(family) || 0) >= 2) return;
     selected.push(article); families.set(family, (families.get(family) || 0) + 1);
   };
+  // 新着の実用記事を最大3枠確保。昨日の高得点記事だけでTodayが固定されるのを防ぐ。
+  const fresh = ranked.filter(article => isFreshArticle(article,now));
+  for (const article of fresh) {
+    if (selected.length === 3) break;
+    add(article);
+  }
   for (const article of ranked) {
     if (selected.length === 5) break;
     add(article);
   }
-  // 最近の有用な動画がある日は1枠を確保。古い動画で最新ニュースを押し出さない。
-  const videos = ranked.filter(item => item.sourceType === 'youtube' && now - Date.parse(item.publishedAt) <= 7 * 24 * HOUR);
+  // 新着を押し出さず、直近48時間の動画だけ1枠を確保。新着がなければ7日まで。
+  const videoAge = fresh.length ? 48 * HOUR : 7 * 24 * HOUR;
+  const videos = ranked.filter(item => item.sourceType === 'youtube' && now - Date.parse(item.publishedAt) <= videoAge);
   const video = videos.find(item=>item.summaryBasis === 'video-transcript') || videos[0];
   if (video && !selected.some(item => item.sourceType === 'youtube')) {
     const family = video.sourceFamily || video.source;
     if ((families.get(family) || 0) < 2) {
-      if (selected.length === 5) {const removed = selected.pop(); const removedFamily = removed.sourceFamily || removed.source; families.set(removedFamily,families.get(removedFamily) - 1);}
-      add(video);
+      const replace = selected.findLastIndex(article => isFreshArticle(video,now) || !isFreshArticle(article,now));
+      if (selected.length < 5 || replace >= 0) {
+        if (selected.length === 5) {const [removed] = selected.splice(replace,1); const removedFamily = removed.sourceFamily || removed.source; families.set(removedFamily,families.get(removedFamily) - 1);}
+        add(video);
+      }
     }
   }
   for (const article of ranked) {
@@ -113,6 +123,11 @@ export function selectToday(articles, prefs, now = Date.now()) {
     }
   }
   return selected;
+}
+
+export function isFreshArticle(article,now = Date.now()) {
+  const published = Date.parse(article.publishedAt);
+  return Number.isFinite(published) && published <= now + 5 * 60000 && now - published <= 24 * HOUR;
 }
 
 export function limitFeedArticles(articles,limit = 100,now = Date.now()) {

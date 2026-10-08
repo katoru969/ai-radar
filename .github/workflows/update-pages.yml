@@ -4,8 +4,9 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    # 仮設定: 毎朝07:17 JST。GitHubの定時実行には遅延があり得ます。
-    - cron: '17 22 * * *'
+    # 日本時間の01:17 / 04:17 / 07:17 / 10:17 / 13:17 / 16:17 / 19:17 / 22:17。
+    # 3時間ごとに新着を収集。GitHubの定時実行には遅延があり得ます。
+    - cron: '17 1,4,7,10,13,16,19,22 * * *'
 
 permissions:
   contents: read

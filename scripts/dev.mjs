@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import handler from '../api/feed.js';
 const root = new URL('../', import.meta.url);
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png'};
-const allowed = new Set(['index.html','app.js','styles.css','shared.js','article-details.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png']);
+const allowed = new Set(['index.html','app.js','styles.css','shared.js','article-details.js','feed-refresh.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png']);
 const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   const pathname = new URL(req.url,'http://localhost').pathname;

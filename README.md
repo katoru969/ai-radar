@@ -1,10 +1,13 @@
-# AI Radar — Version 1.3 / 無料運用
+# AI Radar — Version 1.3.1 / 無料運用
 
 iPhoneで毎日1〜2分、個人で使えるAIの新機能・料金・使い方を確認するPWA。
 公開先：[AI Radar](https://katoru969.github.io/ai-radar/)。淡い配色・角丸カード・下部ナビを維持しています。
 
 ## 今回の変更
 
+- **更新・新着表示を修正（2026-10-08）**：自動収集は成功していましたが、Todayの高得点記事・確認済み動画が固定され、新着を見落としやすい状態でした。24時間以内の実用記事を最大3枠優先し、「新着・24時間以内」を表示。古い動画で新着を押し出しません。日本語のリファクタリング・デバッグ中心の記事も除外します。
+- 「ニュースを更新する」の結果（新着件数／内容の更新／新着なし）と公開データの確認時刻を表示。最終収集日時と区別し、通信失敗・保存分の利用を成功扱いしません。静的JSONの確認用URLを毎回変更して古い応答を避け、オフライン保存は1つに統一。壊れた・以前の公開データで正常データを上書きしません。
+- **自動収集を約3時間ごとへ変更**。更新ボタンは最新の公開JSONを読み直す操作です。押すたびの外部サイトの収集には対応しません。GitHubの定時実行・反映には遅延があります。
 - 重要度の大きな文字・意味のラベルと、カード全体の背景を **A＝淡い赤、B＝淡い黄、C＝淡い緑** に統一。読み方の説明も同じ配色です。
 - 「詳しいまとめ」の下に、元記事の説明図・操作画面を最大2枚表示。本文内の説明・画像の説明文から選び、サムネイル・アバター・小さなアイコン・広告バナーを除外。出典リンクと拡大表示を付けました。画像は元サイトから読み込み、通信できない場合も文章と出典を表示します。
 - YouTubeの章名だけで作られていた詳しいまとめを改善。**5本の日本語自動字幕を今回確認し、約350〜390字のまとめと「ハンズオンの中身」を整理**しました。操作手順・できあがるもの・必要な条件と、その実演時刻へのリンクを表示します。
@@ -14,7 +17,7 @@ iPhoneで毎日1〜2分、個人で使えるAIの新機能・料金・使い方�
 
 ## 動いている機能
 
-- **Today**：ChatGPT・Claude・Geminiの新機能・料金変更、今日から試せる使い方を最大5件。簡単な設定・コピペも対象。SDK・API実装・CLI・研究・企業導入中心の記事を除外。直近7日を優先し、少ない場合は30日まで拡大。本文・字幕のある記事を優先し、最近の活用動画も候補にします。
+- **Today**：ChatGPT・Claude・Geminiの新機能・料金変更、今日から試せる使い方を最大5件。24時間以内の実用記事を最大3枠優先し、残りは重要度・興味・本文の有無で選出。簡単な設定・コピペも対象。SDK・API実装・CLI・研究・企業導入中心の記事を除外。直近7日を優先し、少ない場合は30日まで拡大。新着が少ない日は直近の重要記事も表示するため、毎回全件が入れ替わるわけではありません。
 - **Explore**：All / Official / YouTube / note / GitHub / Zenn / Qiita / Bluesky / Hacker News / Mastodon、検索・日付順。最大100件。GitHub SDKの収集は停止中。
 - **Learn**：Agent / MCP / API / RAG / Context window / Embedding / Inferenceなど9語、3段階の説明、未学習 / 理解済みの保存。
 - **Settings**：興味・情報源ON/OFF・通知の希望をlocalStorageへ保存。以前の設定・学習状態を引き継ぎます。情報源別の取得状況・原因も表示。
@@ -59,8 +62,8 @@ npm run preview:pages
 
 1. フォルダ構造・隠しファイルを保持してGitへpush。`Settings → Pages → Source → GitHub Actions`を選択。
 2. `Actions → Collect AI news and publish PWA → Run workflow`。テスト・収集・ビルド後に公開URLが更新されます。既定ブランチへのpushでも実行。
-3. 毎朝07:17（日本時間）にGitHubが収集・公開。PCを閉じても実行されます。実行の遅延・公開リポジトリの長期無活動による停止については[定時実行の仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)を確認。
-4. iPhoneのSafariで公開HTTPS URLを開き、共有 → **ホーム画面に追加**。「更新」は直近の公開データを読み直します。
+3. 日本時間01:17 / 04:17 / 07:17 / 10:17 / 13:17 / 16:17 / 19:17 / 22:17を目安に、GitHubが約3時間ごとに収集・公開。PCを閉じても実行されます。実行の遅延・公開リポジトリの長期無活動による停止については[定時実行の仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)を確認。
+4. iPhoneのSafariで公開HTTPS URLを開き、共有 → **ホーム画面に追加**。「更新」は最新の公開データを確認し、結果と確認時刻を表示します。Settingsの最終収集日時で自動収集の状態を確認できます。
 
 ## VercelへDeployする場合
 
@@ -77,5 +80,6 @@ Vercel版は開いたときに取得し、15分キャッシュ。閉じている
 - プッシュ通知の購読・配信、端末間同期・永続DB、SNS全体検索は未実装。通知は希望の保存のみ。
 - iPhone実機のSafari / ホーム画面、Vercel実Deployは未確認。
 - 2026-10-07：回帰テスト55件、15接続先の実データ収集、日本語字幕5本の確認・整理、元記事の図解表示、静的ビルド、320 / 390 / 430 / 768pxの4画面に横はみ出しなし、課金AI呼び出し0を確認。
+- 2026-10-08：回帰テスト61件、15接続先の実データ収集、静的ビルドを確認。ブラウザで前日分→最新分の更新・変更なし・サーバー停止時の保存分への復帰を確認し、320 / 390pxの4画面に横はみ出しなし。データ破損・古い応答で保存済みデータを上書きしないケースもテストしています。
 
-構成：`app.js / styles.css / shared.js / article-details.js / terms.js`（画面・公開データ検証）、`lib/reader-summary.mjs`（本文・図解）、`lib/video-summary.mjs`（字幕・手順）、`content/video-guides.json`（確認済みの動画メモ）、`lib/`（収集・正規化）、`api/feed.js`、`scripts/`、`.github/workflows/update-pages.yml`、`tests/`。
+構成：`app.js / styles.css / shared.js / article-details.js / feed-refresh.js / terms.js`（画面・公開データ検証・更新結果）、`lib/reader-summary.mjs`（本文・図解）、`lib/video-summary.mjs`（字幕・手順）、`content/video-guides.json`（確認済みの動画メモ）、`lib/`（収集・正規化）、`api/feed.js`、`scripts/`、`.github/workflows/update-pages.yml`、`tests/`。
