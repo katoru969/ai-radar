@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {transcriptQueue,applyVideoTranscript} from '../lib/video-summary.mjs';
-import {transcriptPanelSegments} from '../lib/transcript-panel.mjs';
+import {transcriptPanelSegments,transcriptVideoMatches} from '../lib/transcript-panel.mjs';
 import {youtubeVideoId} from '../article-details.js';
 import {sanitizeSnapshot} from '../lib/snapshot.mjs';
 
@@ -38,8 +38,9 @@ try {
       stage='heading';
       await page.getByRole('heading',{level:1}).first().waitFor();
       stage='identity';
-      const canonical=await page.locator('link[rel="canonical"]').getAttribute('href');
-      if (canonical && youtubeVideoId(new URL(canonical,'https://www.youtube.com/').href)!==id) throw new Error('identity');
+      const canonicalLink=page.locator('link[rel="canonical"]');
+      const canonical=await canonicalLink.count() ? await canonicalLink.first().getAttribute('href') : '';
+      if (!transcriptVideoMatches(page.url(),canonical,id)) throw new Error('identity');
       // Only normal public UI. Login, CAPTCHA and restricted videos are left alone.
       const more=page.locator('#description-inline-expander').getByRole('button',{name:/^(もっと見る|Show more|more)$/i}).first();
       const show=page.getByRole('button',{name:/^(文字起こしを表示|Show transcript)$/i}).first();

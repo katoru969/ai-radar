@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fetchVideoTranscript,enrichVideoArticles,transcriptQueue,applyVideoTranscript,parseTranscriptExport} from '../lib/video-summary.mjs';
-import {transcriptPanelSegments} from '../lib/transcript-panel.mjs';
+import {transcriptPanelSegments,transcriptVideoMatches} from '../lib/transcript-panel.mjs';
 import {SUMMARY_VERSION} from '../lib/reader-summary.mjs';
 import {selectToday,readerFit} from '../shared.js';
 import guides from '../content/video-guides.json' with {type:'json'};
@@ -59,4 +59,10 @@ test('A verified practical configuration guide is not removed just because its f
   assert.equal(readerFit(enriched).eligible,true);
   assert.equal(readerFit({...enriched,originalTitle:guide.alternateTitles[0]}).eligible,true);
   assert.equal(readerFit({...enriched,originalTitle:'Claude CodeのPython APIとSDKを実装する'}).eligible,false);
+});
+test('Browser transcript identity tolerates missing or malformed canonicals but rejects genuine video mismatches',()=>{
+  for (const canonical of ['', 'invalid', '/watch?v=abcdefghijk']) assert.equal(transcriptVideoMatches(url,canonical,'abcdefghijk'),true);
+  assert.equal(transcriptVideoMatches(url,'/watch?v=another_vid','abcdefghijk'),false);
+  assert.equal(transcriptVideoMatches(url.replace('abcdefghijk','another_vid'),'','abcdefghijk'),false);
+  assert.equal(transcriptVideoMatches('https://evil.example/watch?v=abcdefghijk','','abcdefghijk'),false);
 });

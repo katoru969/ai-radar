@@ -103,4 +103,4 @@ Vercel版は開いたときに取得し、15分キャッシュ。閉じている
 
 構成：`app.js / styles.css / shared.js / article-details.js / feed-refresh.js / article-state.js / terms.js`（画面・更新結果・端末内の記事状態）、`lib/reader-summary.mjs`（本文・図解）、`lib/video-summary.mjs`（字幕・手順）、`content/video-guides.json`（確認済みの動画メモ）、`docs/summarization.md`（要約の設計・プロンプト案）、`lib/`（収集・正規化）、`api/feed.js`、`scripts/`、`.github/workflows/update-pages.yml`、`tests/`。
 
-- 2026-10-13 / Version 1.5.1：回帰テスト89件。空の字幕応答の区別、失敗の再試行、成功キャッシュの保持、未取得動画の巡回、原題の確認済み別表記、字幕原文・署名付きURLを公開しないこと、Todayの詳細あり10件を検証。
+- 2026-10-13 / Version 1.5.1：回帰テスト90件。空の字幕応答の区別、失敗の再試行、成功キャッシュの保持、未取得動画の巡回、原題の確認済み別表記、字幕原文・署名付きURLを公開しないこと、Todayの詳細あり10件を検証。
