@@ -16,7 +16,9 @@ for (const [sourceId,videoId] of [['youtube-chaen','tEA7wZFxEl0'],['youtube-pivo
     let player;
     try {player = embeddedJson(html,'ytInitialPlayerResponse');} catch {}
     const canonical = $('link[rel="canonical"]').attr('href') || '';
-    const shape = {sourceId,videoId,bytes:Buffer.byteLength(html),player:!!player,videoDetails:!!player?.videoDetails,canonicalAbsolute:/^https:\/\//.test(canonical),canonicalRelative:canonical.startsWith('/'),channelMeta:!!$('meta[itemprop="channelId"]').attr('content'),dateMeta:!!$('meta[itemprop="datePublished"]').attr('content')};
+    let initial;
+    try {initial = embeddedJson(html,'ytInitialData');} catch {}
+    const shape = {sourceId,videoId,bytes:Buffer.byteLength(html),player:!!player,videoDetails:!!player?.videoDetails,playerKeys:Object.keys(player || {}).slice(0,10),playability:player?.playabilityStatus?.status || '',canonicalPrefix:canonical.split('?')[0].slice(0,80),canonicalAbsolute:/^https:\/\//.test(canonical),canonicalRelative:canonical.startsWith('/'),channelMeta:!!$('meta[itemprop="channelId"]').attr('content'),dateMeta:!!$('meta[itemprop="datePublished"]').attr('content'),structured: $('script[type="application/ld+json"]').length,watchData:!!initial?.contents?.twoColumnWatchNextResults,initialVideoId:initial?.currentVideoEndpoint?.watchEndpoint?.videoId || '',microformatKeys:Object.keys(player?.microformat || {})};
     try {console.log(JSON.stringify({...shape,articleParsed:!!parseWatchPage(html,videoId,source)}));}
     catch (error) {console.log(JSON.stringify({...shape,parseError:error.name,message:String(error.message).replace(/https?:\/\/\S+/g,'[URL]').slice(0,150)}));}
   } catch (error) {console.log(JSON.stringify({sourceId,videoId,error:safeFetchError(error),name:error.name,code:error.code || '',cause:error.cause?.code || ''}));}

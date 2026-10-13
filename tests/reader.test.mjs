@@ -119,6 +119,18 @@ test('Public HTML metadata recovers when player JSON is absent, with channel and
   assert.equal(parseWatchPage(html.replace(channelId,'UCother'),videoId,ytSource,now),null);
   assert.equal(parseWatchPage(html.replace('2026-10-06','2026-10-08'),videoId,ytSource,now),null);
 });
+test('Relative canonical links and public watch information work without player details, but identities and real dates remain required',()=>{
+  const primary={videoPrimaryInfoRenderer:{title:{runs:[{text:'ChatGPTの新機能を活用'}]},dateText:{simpleText:'Oct 6, 2026'}}};
+  const secondary={videoSecondaryInfoRenderer:{owner:{videoOwnerRenderer:{navigationEndpoint:{browseEndpoint:{browseId:channelId}}}},description:{runs:[{text:'新機能を仕事に活用します。'}]}}};
+  const publicInfo={currentVideoEndpoint:{watchEndpoint:{videoId}},contents:{twoColumnWatchNextResults:{results:{results:{contents:[primary,secondary]}}}}};
+  const html=`<link rel="canonical" href="/watch?v=${videoId}"><script>var ytInitialData=${JSON.stringify(publicInfo)};</script>`;
+  const article=parseWatchPage(html,videoId,ytSource,now);
+  assert.equal(article.publishedAt,'2026-10-06T00:00:00.000Z'); assert.equal(article.publishedAtPrecision,'day');
+  assert.equal(parseWatchPage(html.replace(channelId,'UCother'),videoId,ytSource,now),null);
+  assert.equal(parseWatchPage(html.replace('Oct 6, 2026','3 hours ago'),videoId,ytSource,now),null);
+  assert.equal(parseWatchPage('<link rel="canonical" href="not a valid canonical">',videoId,ytSource,now),null);
+  assert.equal(parseWatchPage(html.replace(videoId,'zzzzzzzzzzz'),videoId,ytSource,now),null);
+});
 test('YouTube retries transient RSS failure before returning actual feed data',async () => {
   const rss = `<feed><entry><title>ChatGPTの新機能</title><link href="https://www.youtube.com/watch?v=${videoId}"/><published>2026-10-06T12:00:00Z</published></entry></feed>`;
   for (const status of [404,500]) {
