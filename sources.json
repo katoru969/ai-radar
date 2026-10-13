@@ -12,8 +12,14 @@
   "note": [{"id":"note-official","name":"note公式","family":"note","handle":"info","aiOnly":true}],
   "youtube": [
     {"id":"youtube-openai","name":"OpenAI YouTube","family":"OpenAI","channelId":"UCXZCJLdBC09xxGZ6gcdrc6A","channelUrl":"https://www.youtube.com/@OpenAI/videos"},
-    {"id":"youtube-mikimiki","name":"mikimiki web スクール","family":"mikimiki","channelId":"UChxtIA33ty53Hh4MmkXNASg","channelUrl":"https://www.youtube.com/@mikimikiweb/videos","aiOnly":true},
-    {"id":"youtube-keito","name":"KEITO · AI&WEB","family":"KEITO","channelId":"UCfapRkagDtoQEkGeyD3uERQ","channelUrl":"https://www.youtube.com/@keitoaiweb/videos","aiOnly":true}
+    {"id":"youtube-keito","name":"KEITO · AI&WEB","family":"KEITO","channelId":"UCfapRkagDtoQEkGeyD3uERQ","channelUrl":"https://www.youtube.com/@keitoaiweb/videos","aiOnly":true},
+    {"id":"youtube-chaen","name":"チャエン【AI研究所】","family":"チャエン","channelId":"UC9buL3Iph_f7AZxdzmiBL8Q","channelUrl":"https://www.youtube.com/@chaen-ai-lab/videos","aiOnly":true},
+    {"id":"youtube-ai-sennin","name":"AI仙人","family":"AI仙人","channelId":"UCRxPq02pjQS_ax60gcTSDHQ","channelUrl":"https://www.youtube.com/channel/UCRxPq02pjQS_ax60gcTSDHQ/videos","aiOnly":true},
+    {"id":"youtube-pivot","name":"PIVOT 公式チャンネル","family":"PIVOT","channelId":"UC8yHePe_RgUBE-waRWy6olw","channelUrl":"https://www.youtube.com/@pivot00/videos","aiOnly":true,"scanRecent":30},
+    {"id":"youtube-anno","name":"安野貴博の自由研究","family":"安野貴博・チームみらい","channelId":"UCiMwbmcCSMORJ-85XWhStBw","channelUrl":"https://www.youtube.com/channel/UCiMwbmcCSMORJ-85XWhStBw/videos","aiOnly":true},
+    {"id":"youtube-team-mirai","name":"チームみらい公式","family":"安野貴博・チームみらい","channelId":"UC72A_x2FKHkJ8Nc2eIzqj8Q","channelUrl":"https://www.youtube.com/@team_mirai_jp/videos","aiOnly":true,"scanRecent":30},
+    {"id":"youtube-mirai-fan","name":"安野貴博とチームみらい通信（非公式）","family":"安野貴博・チームみらい","channelId":"UC7Yhy9EwOF343ci7O0xpQVw","channelUrl":"https://www.youtube.com/channel/UC7Yhy9EwOF343ci7O0xpQVw/videos","aiOnly":true,"scanRecent":30},
+    {"id":"youtube-iketomo","name":"いけともch","family":"いけとも","channelId":"UCpUQnk6MaY4o3NdgJmv10cw","channelUrl":"https://www.youtube.com/@iketomo-ch/videos","aiOnly":true}
   ],
   "zenn": [
     {"id":"zenn-chatgpt","name":"Zenn · ChatGPT","family":"Zenn","topic":"chatgpt","aiOnly":true},
