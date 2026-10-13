@@ -121,11 +121,12 @@ test('Public HTML metadata recovers when player JSON is absent, with channel and
 });
 test('Relative canonical links and public watch information work without player details, but identities and real dates remain required',()=>{
   const primary={videoPrimaryInfoRenderer:{title:{runs:[{text:'ChatGPTの新機能を活用'}]},dateText:{simpleText:'Oct 6, 2026'}}};
-  const secondary={videoSecondaryInfoRenderer:{owner:{videoOwnerRenderer:{navigationEndpoint:{browseEndpoint:{browseId:channelId}}}},description:{runs:[{text:'新機能を仕事に活用します。'}]}}};
+  const secondary={videoSecondaryInfoRenderer:{owner:{videoOwnerRenderer:{navigationEndpoint:{browseEndpoint:{browseId:channelId}}}},attributedDescription:{content:'新機能を仕事に活用します。\n01:00 ChatGPTの新機能を実演'}}};
   const publicInfo={currentVideoEndpoint:{watchEndpoint:{videoId}},contents:{twoColumnWatchNextResults:{results:{results:{contents:[primary,secondary]}}}}};
   const html=`<link rel="canonical" href="/watch?v=${videoId}"><script>var ytInitialData=${JSON.stringify(publicInfo)};</script>`;
   const article=parseWatchPage(html,videoId,ytSource,now);
   assert.equal(article.publishedAt,'2026-10-06T00:00:00.000Z'); assert.equal(article.publishedAtPrecision,'day');
+  assert.match(article.originalSummary,/新機能を仕事に活用します/); assert.match(article.originalSummary,/01:00 ChatGPT/);
   for (const date of ['2026/10/06','2026年10月6日']) assert.equal(parseWatchPage(html.replace('Oct 6, 2026',date),videoId,ytSource,now).publishedAt,'2026-10-06T00:00:00.000Z');
   assert.equal(parseWatchPage(html.replace('Oct 6, 2026','2026/02/31'),videoId,ytSource,now),null);
   assert.equal(parseWatchPage(html.replace(channelId,'UCother'),videoId,ytSource,now),null);
