@@ -39,6 +39,16 @@ jobs:
           PREVIOUS_FEED_URL: ${{ steps.pages.outputs.base_url }}/data/feed.json
       - name: Diagnose failed YouTube metadata
         run: node scripts/diagnose-youtube.mjs
+      - name: Install browser for public transcripts
+        id: transcript-browser
+        continue-on-error: true
+        timeout-minutes: 2
+        run: npx playwright install --with-deps chromium
+      - name: Read public Japanese transcript panels
+        if: steps.transcript-browser.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/collect-video-captions.mjs
       - run: npm run build:pages
       - uses: actions/upload-pages-artifact@v4
         with:

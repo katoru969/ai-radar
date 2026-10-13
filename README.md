@@ -1,4 +1,4 @@
-# AI Radar — Version 1.5.0 / 無料運用
+# AI Radar — Version 1.5.1 / 無料運用
 
 iPhoneで、個人で使えるAIの新機能・料金・使い方を確認するPWA。
 公開先：[AI Radar](https://katoru969.github.io/ai-radar/)。淡い配色・角丸カード・下部ナビを維持しています。
@@ -34,6 +34,12 @@ iPhoneで、個人で使えるAIの新機能・料金・使い方を確認する
 
 理解状況とブックマークはlocalStorageの `ai-radar-reading-v1` に保存します。用語学習とは別に保持し、既存設定を引き継ぎます。同じ端末・同じブラウザで利用してください。端末間の同期はなく、ブラウザのサイトデータを消去すると保存内容も消えます。保存容量が足りない場合は成功扱いにせずメッセージを表示します。
 
+## YouTubeの字幕取得を改善（Version 1.5.1）
+
+字幕URLが空データを返す問題を確認し、GitHub Actionsで通常の「文字起こしを表示」から日本語字幕を読む補完処理を追加しました。Today候補を優先し、残りも順番に取得。失敗は2時間後に再試行し、取得済みのまとめは30日保持します。動画単位の失敗やブラウザー導入失敗でニュース全体は止まりません。APIキー・追加料金は不要です。
+
+字幕を読んだKEITOのMods・AI仙人のdots・PIVOTのAI競争の要点・詳しいまとめ・具体例を編集。内容のある詳細が10件あれば、Todayは空の詳細がある動画で枠を埋めず、その記事から選びます。未取得の動画はExploreに残します。すべての動画の自動取得や自然な日本語への書き直しは未保証。[取得経路・失敗原因・制限](docs/youtube-captions.md)を参照。
+
 ## 情報源・まとめの仕組み
 
 `sources.json`で接続先を変更できます。稼働中は21接続先：OpenAI、Google AI、Google Japan、Anthropic、note公式、YouTube 9チャンネル、Zenn / Qiita各2トピック、Bluesky、Hacker News、Mastodon。SNSは指定アカウントの公開投稿・人気記事から選別。X・Redditは接続しません。
@@ -42,7 +48,7 @@ iPhoneで、個人で使えるAIの新機能・料金・使い方を確認する
 共通項目：`id, title, source, sourceType, url, publishedAt, summary, detailedSummary, importanceScore, importanceGrade, whyImportant, personalRelevance, terms[], thumbnail`。
 追加項目：`figures[]`（画像・説明・出典）、`videoSections[]`（手順・成果・時刻）、`videoChapters[]`、`videoRequirements[]`、`summaryBasis`、`transcriptCheckedAt`。
 
-日本語の記事本文から、内容・操作・条件を表す文を最大620字で抽出します。短い要点は最大180字、一覧では約3行に表示。抽出方式のため原文の表現・分かりにくさが残る場合があり、Abstract品質を保証しません。英語の記事は日本語版が取得できる場合に使用。生成AIで翻訳・補完はしません。確認した動画の編集メモは `content/video-guides.json` に置き、動画ID・発信元・原題が一致した場合だけ使います。自動字幕には誤認識があり、映像の画面やコード自体は未確認です。
+日本語の記事本文から、内容・操作・条件を表す文を最大620字で抽出します。短い要点は最大180字、一覧では約3行に表示。抽出方式のため原文の表現・分かりにくさが残る場合があり、Abstract品質を保証しません。英語の記事は日本語版が取得できる場合に使用。生成AIで翻訳・補完はしません。通常のブラウザー経由でも字幕を取得できない場合があります。確認した動画の編集メモは `content/video-guides.json` に置き、動画ID・発信元・原題が一致した場合だけ使います。自動字幕には誤認識があり、映像の画面やコード自体は未確認です。
 
 YouTube公式の[文字起こし表示](https://support.google.com/youtube/answer/15930243?hl=ja)がある動画でも、自動取得は成功を保証できません。[公式の字幕ダウンロードAPI](https://developers.google.com/youtube/v3/docs/captions/download)には動画の編集権限が必要で、他の配信者の動画を一般のAPIキーだけで取得する仕組みではありません。
 
@@ -96,3 +102,5 @@ Vercel版は開いたときに取得し、15分キャッシュ。閉じている
 - 2026-10-08 / Version 1.4.0：回帰テスト69件。実データでToday 10件、理解済みの即時除外・補充・再読み込み後の保存・解除・取り消しをブラウザで確認。最新フィードから保存した記事を除いたケースでも、ブックマークから本文・詳細を読めることを確認。320 / 390pxの4画面に横はみ出しなし。本文の事実・料金条件を保持し、途中で切れた文や引用の疑問文を要点にしないケースを追加。課金AI呼び出し0。
 
 構成：`app.js / styles.css / shared.js / article-details.js / feed-refresh.js / article-state.js / terms.js`（画面・更新結果・端末内の記事状態）、`lib/reader-summary.mjs`（本文・図解）、`lib/video-summary.mjs`（字幕・手順）、`content/video-guides.json`（確認済みの動画メモ）、`docs/summarization.md`（要約の設計・プロンプト案）、`lib/`（収集・正規化）、`api/feed.js`、`scripts/`、`.github/workflows/update-pages.yml`、`tests/`。
+
+- 2026-10-13 / Version 1.5.1：回帰テスト89件。空の字幕応答の区別、失敗の再試行、成功キャッシュの保持、未取得動画の巡回、原題の確認済み別表記、字幕原文・署名付きURLを公開しないこと、Todayの詳細あり10件を検証。

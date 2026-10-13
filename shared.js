@@ -46,7 +46,8 @@ export function readerFit(article) {
   if (engineering && !simpleSetup && !contextEpisode) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
   const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン|vertex ai|cloud billing|spend cap|IAMロール|thinking_level|サンプリングパラメータ|sympy|Line\.equation)/i.test(excerpt);
   if (developerAudience && !simpleSetup && !contextEpisode) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};
-  const technicalMentions = excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || [];
+  // Repeating one product name in a fuller summary does not make it an engineering article.
+  const technicalMentions = [...new Set((excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || []).map(value=>value.toLowerCase()))];
   if (technicalMentions.length >= 3 && !simpleSetup && !contextEpisode) return {eligible:false,category:'',reason:'本文の中心が開発・性能検証',priority:0};
   if (!contextEpisode && /partner|verification program|funding|acquisit|enterprise|quant research|life sciences|training.*engineers|sponsor|keynote|summit|conference|case study|partnership|customer stor|for financial services|business value|usage analytics|\bads\b|advertis|prompt caching|online storage|end-to-end systems|\bscales?\b.*(?:claude|chatgpt)|^how (?!to\b).+ with (?:chatgpt|claude|gpt)|frees up.*grow with|completes?.*faster with|turns legal context|提携|資金調達|買収|企業向け|法人向け|導入事例|広告出稿|登壇|イベント開催|コンテスト|受賞|採用情報|(?:大学|機関).*(?:連携|支援)/i.test(title)) return {eligible:false,category:'',reason:'個人の利用に直結しない発表',priority:0};
   const pricing = /pric|pricing|subscription|\bplans?\b|\bfree\b|料金|価格|値上げ|値下げ|無料|有料|課金|プラン|上限|制限/i.test(title);
@@ -90,9 +91,13 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const understood = new Set(prefs.understoodArticleIds || []);
   const candidates = articles.filter(article => !understood.has(article.id) && prefs.sources[article.sourceType] !== false && readerFit(article).eligible && Number.isFinite(Date.parse(article.publishedAt)) && Date.parse(article.publishedAt) <= now + 5 * 60000);
   const recent = candidates.filter(article => now - Date.parse(article.publishedAt) <= 7 * 24 * HOUR);
-  const pool = recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
+  const extended = candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
+  const extendedComplete = extended.filter(article=>article.detailedSummary?.length>=140);
+  const pool = recent.filter(article=>article.detailedSummary?.length>=140).length>=TODAY_LIMIT ? recent : extendedComplete.length>=TODAY_LIMIT ? extendedComplete : recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : extended;
   const readable = pool.filter(article => !article.summaryBasis || article.summaryBasis !== 'unavailable');
-  const readingPool = readable.length >= 3 ? readable : pool;
+  const complete = readable.filter(article=>article.detailedSummary?.length>=140);
+  // If ten substantive summaries exist, Today is readable without opening videos.
+  const readingPool = complete.length>=TODAY_LIMIT ? complete : readable.length >= 3 ? readable : pool;
   const rank = article => article.importanceScore + readerFit(article).priority + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length * 3 + (['article','video-transcript'].includes(article.summaryBasis) ? 4 : 0) - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 2;
   const ranked = [...readingPool].sort((a, b) => rank(b) - rank(a) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
   const selected = [], families = new Map();
