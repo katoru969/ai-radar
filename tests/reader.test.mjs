@@ -126,6 +126,8 @@ test('Relative canonical links and public watch information work without player 
   const html=`<link rel="canonical" href="/watch?v=${videoId}"><script>var ytInitialData=${JSON.stringify(publicInfo)};</script>`;
   const article=parseWatchPage(html,videoId,ytSource,now);
   assert.equal(article.publishedAt,'2026-10-06T00:00:00.000Z'); assert.equal(article.publishedAtPrecision,'day');
+  for (const date of ['2026/10/06','2026年10月6日']) assert.equal(parseWatchPage(html.replace('Oct 6, 2026',date),videoId,ytSource,now).publishedAt,'2026-10-06T00:00:00.000Z');
+  assert.equal(parseWatchPage(html.replace('Oct 6, 2026','2026/02/31'),videoId,ytSource,now),null);
   assert.equal(parseWatchPage(html.replace(channelId,'UCother'),videoId,ytSource,now),null);
   assert.equal(parseWatchPage(html.replace('Oct 6, 2026','3 hours ago'),videoId,ytSource,now),null);
   assert.equal(parseWatchPage('<link rel="canonical" href="not a valid canonical">',videoId,ytSource,now),null);
