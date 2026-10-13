@@ -52,7 +52,7 @@ export function readerFit(article) {
   if (!contextEpisode && /partner|verification program|funding|acquisit|enterprise|quant research|life sciences|training.*engineers|sponsor|keynote|summit|conference|case study|partnership|customer stor|for financial services|business value|usage analytics|\bads\b|advertis|prompt caching|online storage|end-to-end systems|\bscales?\b.*(?:claude|chatgpt)|^how (?!to\b).+ with (?:chatgpt|claude|gpt)|frees up.*grow with|completes?.*faster with|turns legal context|提携|資金調達|買収|企業向け|法人向け|導入事例|広告出稿|登壇|イベント開催|コンテスト|受賞|採用情報|(?:大学|機関).*(?:連携|支援)/i.test(title)) return {eligible:false,category:'',reason:'個人の利用に直結しない発表',priority:0};
   const pricing = /pric|pricing|subscription|\bplans?\b|\bfree\b|料金|価格|値上げ|値下げ|無料|有料|課金|プラン|上限|制限/i.test(title);
   const feature = /introduc|meet |launch|release|available|roll.?out|update|\bnew\b|新機能|新モデル|新しい|追加|登場|公開|発表|アップデート|アプデ|爆誕|リリース|対応|提供開始|進化/i.test(title);
-  const consumerUse = /voice|audio|image|video|app\b|using|create|generat|building.*website|running routes|画像|動画|音声|録音|議事録|資料|プロンプト|アプリ|使って|使う|使える|を作|活用|感想|レビュー|比較|実演|検証|impressions/i.test(title);
+  const consumerUse = /voice|audio|image|video|app\b|using|create|generat|building.*website|running routes|画像|動画|音声|録音|議事録|資料|プロンプト|アプリ|使って|使う|使える|を作|活用|感想|レビュー|比較|実演|検証|カスタマイズ|改造|impressions/i.test(title);
   const modelUpdate = /gpt[- ]?\d|gemini\s*\d|claude\s*(?:opus|sonnet|haiku|fable)\s*\d/i.test(title);
   if (article.sourceType === 'official' && !/[ぁ-んァ-ヶ一-龯]/u.test(title)) {
     const individualAnnouncement = /^(?:introducing|meet|new|more|a model guide|a guide|how to|what|you|your|chatgpt|claude|gemini|gpt[- ])|\b(?:in|for) (?:chatgpt|the gemini app)/i.test(title) || /users can|chatgpt (?:plus|pro|free)|gemini app/i.test(excerpt);

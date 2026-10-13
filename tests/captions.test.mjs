@@ -57,5 +57,6 @@ test('A verified practical configuration guide is not removed just because its f
   const guide=guides.find(item=>item.videoId==='pXZMwLLED4M');
   const enriched={...article,originalTitle:guide.originalTitle,summary:guide.summary,detailedSummary:guide.detailedSummary};
   assert.equal(readerFit(enriched).eligible,true);
+  assert.equal(readerFit({...enriched,originalTitle:guide.alternateTitles[0]}).eligible,true);
   assert.equal(readerFit({...enriched,originalTitle:'Claude CodeのPython APIとSDKを実装する'}).eligible,false);
 });

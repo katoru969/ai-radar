@@ -18,12 +18,15 @@ try {
   for (const article of queue) {
     if (stopped) break;
     const id=youtubeVideoId(article.url),page=await context.newPage();
-    let segments=[],reason='browser_unavailable',captionKind='';
+    let segments=[],reason='browser_unavailable',captionKind='',stage='navigation',transcriptHttp=null;
     page.setDefaultTimeout(5000);
     page.setDefaultNavigationTimeout(12000);
     page.on('response',async response=>{
       try {
-        if (!response.ok() || new URL(response.url()).pathname!=='/youtubei/v1/get_transcript') return;
+        const responseUrl=new URL(response.url());
+        if (responseUrl.hostname!=='www.youtube.com' || responseUrl.pathname!=='/youtubei/v1/get_transcript') return;
+        transcriptHttp=response.status();
+        if (!response.ok()) return;
         const body=await response.body();
         if (body.length>2000000) return;
         const rows=transcriptPanelSegments(JSON.parse(body.toString('utf8')));
@@ -32,15 +35,22 @@ try {
     });
     try {
       await page.goto(`https://www.youtube.com/watch?v=${id}&hl=ja`,{waitUntil:'domcontentloaded'});
+      stage='heading';
       await page.getByRole('heading',{level:1}).first().waitFor();
+      stage='identity';
       const canonical=await page.locator('link[rel="canonical"]').getAttribute('href');
       if (canonical && youtubeVideoId(new URL(canonical,'https://www.youtube.com/').href)!==id) throw new Error('identity');
       // Only normal public UI. Login, CAPTCHA and restricted videos are left alone.
       const more=page.locator('#description-inline-expander').getByRole('button',{name:/^(もっと見る|Show more|more)$/i}).first();
-      if (await more.isVisible()) await more.click();
       const show=page.getByRole('button',{name:/^(文字起こしを表示|Show transcript)$/i}).first();
+      stage='expand-description';
+      if (!await show.isVisible()) {
+        try {await more.waitFor({state:'visible',timeout:5000});await more.click();} catch {}
+      }
+      stage='transcript-button';
       await show.waitFor({timeout:6000});
       await show.click();
+      stage='transcript-response';
       const rows=page.locator('ytd-transcript-segment-renderer');
       try {await rows.first().waitFor({timeout:7000});} catch {}
       if (!segments.length) segments=await rows.evaluateAll(elements=>elements.map(element=>{
@@ -52,7 +62,8 @@ try {
       reason=segments.length ? '' : 'browser_unavailable';
     } catch {reason='browser_unavailable';}
     const ready=applyVideoTranscript(article,{segments,reason,captionKind},{now,method:'browser'});
-    outcomes.push({videoId:id,ready,segments:segments.length,reason:article.transcriptReason});
+    const publicPage=await page.locator('body').innerText({timeout:1000}).catch(()=>'');
+    outcomes.push({videoId:id,ready,segments:segments.length,reason:article.transcriptReason,stage,transcriptHttp,restricted:/Sign in to confirm|not a bot|ロボットでない|ログインして確認|unusual traffic|CAPTCHA/i.test(publicPage)});
     await page.close().catch(()=>{});
   }
 } catch {
