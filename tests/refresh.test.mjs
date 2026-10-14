@@ -90,3 +90,25 @@ test('Service worker shares one feed cache across refresh queries and retains th
   assert.equal((await (await request(4)).json()).generatedAt,good.generatedAt);
   assert.equal(stored.size,1);
 });
+
+test('A new worker installs current code even while the previous module is still in the HTTP cache',async()=>{
+  const listeners={},stored=new Map();let claimed=false;
+  const cache={addAll:async requests=>{for(const request of requests)stored.set(request.url,request.cache==='reload'?'current code':'previous code');}};
+  const context={URL,Request,Set,Promise,self:{location:{href:'https://example.com/ai-radar/sw.js'},addEventListener:(type,listener)=>listeners[type]=listener,skipWaiting:()=>{claimed=true;}},caches:{open:async()=>cache}};
+  vm.runInNewContext(await fs.readFile(new URL('../sw.js',import.meta.url),'utf8'),context);
+  let installed;listeners.install({waitUntil:value=>installed=value});await installed;
+  assert.equal(stored.get('https://example.com/ai-radar/importance.js'),'current code');
+  assert.equal(stored.get('https://example.com/ai-radar/app.js'),'current code');
+  assert.equal(claimed,true);
+});
+
+test('Online module requests revalidate code after deployment and offline still uses the saved module',async()=>{
+  const listeners={},stored=new Map();let offline=false;
+  const key=request=>typeof request==='string'?request:request.url;
+  const cache={put:async(request,response)=>stored.set(key(request),response.clone()),match:async request=>stored.get(key(request))?.clone()};
+  const context={URL,Headers,Response,Set,Promise,Error,self:{location:{href:'https://example.com/ai-radar/sw.js'},addEventListener:(type,listener)=>listeners[type]=listener},caches:{open:async()=>cache},fetch:async(request,options)=>{if(offline)throw new Error('offline');const response=new Response(options?.cache==='no-cache'?'current rubric':'previous rubric');Object.defineProperty(response,'type',{value:'basic'});return response;}};
+  vm.runInNewContext(await fs.readFile(new URL('../sw.js',import.meta.url),'utf8'),context);
+  const request=()=>{let result;listeners.fetch({request:new Request('https://example.com/ai-radar/importance.js'),respondWith:value=>result=value});return result;};
+  assert.equal(await (await request()).text(),'current rubric');
+  offline=true;assert.equal(await (await request()).text(),'current rubric');
+});
