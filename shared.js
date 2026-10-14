@@ -1,3 +1,5 @@
+import {normalizeWorkPriorities} from './importance.js';
+export {gradeFor,GRADE_LABELS} from './importance.js';
 export const SOURCE_TYPES = ['official','youtube','note','github','zenn','qiita','bluesky','hackernews','mastodon'];
 export const SOCIAL_TYPES = ['bluesky','hackernews','mastodon'];
 export const SOURCE_LABELS = {official:'Official',youtube:'YouTube',note:'note',github:'GitHub',zenn:'Zenn',qiita:'Qiita',bluesky:'Bluesky',hackernews:'Hacker News',mastodon:'Mastodon'};
@@ -10,6 +12,7 @@ export function normalizePreferences(saved = {}) {
   const interests = Array.isArray(saved?.interests) ? saved.interests.map(value => migrationsByInterest[value] || value).filter(value => INTERESTS.includes(value)) : ['新機能・料金','使い方・設定'];
   return {
     interests:[...new Set(interests)],
+    workPriorities:normalizeWorkPriorities(saved?.workPriorities),
     sources:Object.fromEntries(SOURCE_TYPES.map(type => [type,typeof old[type] === 'boolean' ? old[type] : typeof old[migrations[type]] === 'boolean' ? old[migrations[type]] : true])),
     notifications:{important:saved?.notifications?.important === true,digest:saved?.notifications?.digest === true},
     understood:Array.isArray(saved?.understood) ? [...new Set(saved.understood.filter(term => TERM_NAMES.includes(term)))] : []
@@ -21,8 +24,6 @@ export const safeUrl = value => {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : ''; }
   catch { return ''; }
 };
-export const gradeFor = score => score >= 85 ? 'A' : score >= 72 ? 'B' : 'C';
-export const GRADE_LABELS = {A:'まずチェック',B:'試す候補',C:'参考情報'};
 
 // 判定は原題を中心に行う。動画説明欄の宣伝にChatGPTがあるだけでは採用しない。
 export function readerFit(article) {
@@ -40,11 +41,12 @@ export function readerFit(article) {
   const contextEpisode = video && aiUse && /ニュース|トレンド|最前線|社会|民主主義|政策|規制|安全|セキュリティ|漏洩|情報流出|仕事|働|雇用|人材|教育|学習/u.test(title) && !/\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|実装|アーキテクチャ|環境構築/i.test(title);
   const howTo = /how (?:to|i)|guide|tips|tutorial|prompt|使い方|活用|手順|設定|コツ|入門|初心者|プロンプト|試して|使って|やり方|できること|使える|方法|比較|選び方|時短|徹底解説|テクニック|習慣|仕事術|使い分け|ノウハウ/i.test(title);
   const simpleSetup = /no[- ]?code|without cod|ノーコード|コピペ|初心者|コード不要|簡単な設定/i.test(title);
-  if (/next\.?js|react\b|\baws\b|bedrock|vertex ai|cloud run|kubernetes|mathlib|\blean\b|個人開発|フロントエンド|バックエンド|インフラ|環境構築|型エラー/i.test(title)) return {eligible:false,category:'',reason:'開発環境・実装向け',priority:0};
+  if (/next\.?js|react\b|\baws\b|bedrock|vertex ai|cloud run|kubernetes|\badk\b|agent development kit|ハッカソン|mathlib|\blean\b|個人開発|フロントエンド|バックエンド|インフラ|環境構築|MCP Events|型エラー/i.test(title)) return {eligible:false,category:'',reason:'開発環境・実装向け',priority:0};
   if (/mentalhealthbench|benchmark|\bbench\b|system card|model card|safety overview|quantum|enzyme|crispr|研究チーム|研究成果|未解決問題|形式証明|数学.*証明|量子|酵素/i.test(`${title} ${excerpt.slice(0,200)}`)) return {eligible:false,category:'',reason:'研究・性能検証が中心',priority:0};
   const engineering = /\bapi\b|\bsdk\b|\bcli\b|\bcoding\b|\bdevelopers?\b|\bengineering\b|\barchitecture\b|\bimplementation\b|python|typescript|javascript|docker|kubernetes|langchain|llamaindex|embedding|fine[- ]?tun|\brag\b|mlops|benchmark|\be2e\b|gemini-\d|voice conversion|tts.*(?:構成|実測)|移行ガイド|隠しテスト|ユニットテスト|開発工程|ベンチマーク|実装|アーキテクチャ|ライブラリ|ファインチューニング|埋め込み|コーディング|ソースコード|リファクタ|デバッグ|バグ修正|クローラー|MCPサーバー.{0,12}(?:作|実装)|コード(?:生成|修正|レビュー)|開発者|エンジニア|claude code|codex/i.test(title);
-  if (engineering && !simpleSetup && !contextEpisode) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
-  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン|vertex ai|cloud billing|spend cap|IAMロール|thinking_level|サンプリングパラメータ|sympy|Line\.equation)/i.test(excerpt);
+  const delegatedWork = /論文|文献|PDF|資料|スライド|文章作成|文書|フォルダ.*整理|ファイル整理|obsidian/i.test(title) && /AI.{0,15}(?:任せ|依頼)|(?:codex|claude code|chatgpt).{0,30}(?:頼|依頼|指示|任せ)/i.test(`${title} ${excerpt}`) && !/\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|docker|実装|環境構築|コード生成|ソースコード/i.test(title);
+  if (engineering && !simpleSetup && !contextEpisode && !delegatedWork) return {eligible:false,category:'',reason:'開発・実装向け',priority:0};
+  const developerAudience = /API.{0,100}(?:組み込|バッチ|エンドポイント|移行|アプリ開発|追加利用規約)|(?:SDK|pip install|npm install|HTTPリクエスト|APIキー.{0,50}コード|百万トークン|million tokens|入力単価|100\s*万.{0,6}(?:入力|出力)トークン|(?:入力|出力).{0,10}100\s*万.{0,6}トークン|キャッシュ読み取り価格|トークン単価|トークナイザー|コーディングパイプライン|ソースコード.{0,15}読み込み|MCPサーバー|vertex ai|cloud billing|spend cap|IAMロール|thinking_level|サンプリングパラメータ|sympy|Line\.equation)/i.test(excerpt);
   if (developerAudience && !simpleSetup && !contextEpisode) return {eligible:false,category:'',reason:'本文が開発者向け',priority:0};
   // Repeating one product name in a fuller summary does not make it an engineering article.
   const technicalMentions = [...new Set((excerpt.match(/\bapi\b|\bsdk\b|\bcli\b|\bcodex\b|claude code|benchmark|\be2e\b|コーディング|実装|ベンチマーク|エンドポイント|開発工程/gi) || []).map(value=>value.toLowerCase()))];
@@ -60,7 +62,7 @@ export function readerFit(article) {
   }
   // タイトルがモデル名だけの発表は、一般利用できる製品への言及も確認する。
   const appAnnouncement = !product && /gpt[- ]?\d|opus|sonnet|haiku/i.test(title) && /chatgpt|claude|gemini.*app/i.test(excerpt) && feature;
-  const eligible = (product && (pricing || feature || howTo || consumerUse || modelUpdate)) || appAnnouncement || (aiUse && (howTo || video && (consumerUse || pricing))) || contextEpisode;
+  const eligible = (product && (pricing || feature || howTo || consumerUse || modelUpdate)) || appAnnouncement || (aiUse && (howTo || video && (consumerUse || pricing))) || contextEpisode || delegatedWork;
   const category = pricing && (product || aiUse) ? '料金・利用条件' : howTo ? '使い方・設定' : contextEpisode && !product ? 'AIと仕事・社会' : feature || appAnnouncement ? '新機能' : '活用情報';
   return {eligible,category:eligible ? category : '',reason:eligible ? category === 'AIと仕事・社会' ? 'AIが仕事・社会に与える変化' : primary ? '使っているAIの変更・活用' : '個人で試せるAIの活用' : '具体的な利用方法が確認できない',priority:eligible ? (primary ? 12 : contextEpisode ? 6 : 5) + (pricing ? 8 : feature ? 6 : howTo ? 5 : 0) : 0};
 }
@@ -93,12 +95,14 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const recent = candidates.filter(article => now - Date.parse(article.publishedAt) <= 7 * 24 * HOUR);
   const extended = candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
   const extendedComplete = extended.filter(article=>article.detailedSummary?.length>=140);
-  const pool = recent.filter(article=>article.detailedSummary?.length>=140).length>=TODAY_LIMIT ? recent : extendedComplete.length>=TODAY_LIMIT ? extendedComplete : recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : extended;
+  // A/B candidates across the allowed window outrank C padding, even when a C summary is longer.
+  const priorityReading = extended.filter(article=>article.importanceScore>=60 && article.summaryBasis!=='unavailable');
+  const pool = priorityReading.length>=TODAY_LIMIT ? priorityReading : recent.filter(article=>article.detailedSummary?.length>=140).length>=TODAY_LIMIT ? recent : extendedComplete.length>=TODAY_LIMIT ? extendedComplete : recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : extended;
   const readable = pool.filter(article => !article.summaryBasis || article.summaryBasis !== 'unavailable');
   const complete = readable.filter(article=>article.detailedSummary?.length>=140);
   // If ten substantive summaries exist, Today is readable without opening videos.
   const readingPool = complete.length>=TODAY_LIMIT ? complete : readable.length >= 3 ? readable : pool;
-  const rank = article => article.importanceScore + readerFit(article).priority + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length * 3 + (['article','video-transcript'].includes(article.summaryBasis) ? 4 : 0) - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 2;
+  const rank = article => article.importanceScore + (article.topics || []).filter(topic => prefs.interests.includes(topic)).length - Math.max(0,(now - Date.parse(article.publishedAt)) / (24 * HOUR)) * 0.5;
   const ranked = [...readingPool].sort((a, b) => rank(b) - rank(a) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
   const selected = [], families = new Map();
   const add = article => {

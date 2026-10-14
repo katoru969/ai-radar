@@ -4,6 +4,7 @@ import {transcriptQueue,applyVideoTranscript} from '../lib/video-summary.mjs';
 import {transcriptPanelSegments,transcriptVideoMatches} from '../lib/transcript-panel.mjs';
 import {youtubeVideoId} from '../article-details.js';
 import {sanitizeSnapshot} from '../lib/snapshot.mjs';
+import {evaluateImportance} from '../importance.js';
 
 const file=new URL('../data/feed.json',import.meta.url);
 const snapshot=sanitizeSnapshot(JSON.parse(await fs.readFile(file,'utf8'))),now=Date.now();
@@ -74,5 +75,5 @@ try {
   clearTimeout(stop);
   await browser?.close().catch(()=>{});
 }
-if (outcomes.length) await fs.writeFile(file,JSON.stringify(sanitizeSnapshot(snapshot)));
+if (outcomes.length) await fs.writeFile(file,JSON.stringify(sanitizeSnapshot({...snapshot,articles:snapshot.articles.map(article=>({...article,...evaluateImportance(article,{now})}))})));
 console.log(JSON.stringify({captionMethod:'public-transcript-panel',attempted:outcomes.length,ready:outcomes.filter(row=>row.ready).length,outcomes,paidAiCalls:0}));

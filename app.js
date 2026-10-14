@@ -1,5 +1,6 @@
-import {INTERESTS,SOURCE_TYPES,SOURCE_LABELS,SOCIAL_TYPES,TERM_NAMES,GRADE_LABELS,TODAY_LIMIT,safeUrl,gradeFor,readerFit,selectToday,isFreshArticle,normalizePreferences} from './shared.js';
+import {INTERESTS,SOURCE_TYPES,SOURCE_LABELS,SOCIAL_TYPES,TERM_NAMES,GRADE_LABELS,TODAY_LIMIT,safeUrl,readerFit,selectToday,isFreshArticle,normalizePreferences} from './shared.js';
 import {TERMS} from './terms.js';
+import {evaluateImportance,WORK_PRIORITIES} from './importance.js';
 import {sanitizeFigures,sanitizeVideoSections} from './article-details.js';
 import {feedRequestUrl,validFeedPayload,olderFeed,describeFeedRefresh} from './feed-refresh.js';
 import {READING_KEY,normalizeReadingState,setArticleUnderstood,toggleArticleBookmark,findReadingArticle,readingCollection} from './article-state.js';
@@ -21,13 +22,12 @@ function writeStorage(key, value) {try {localStorage.setItem(key,JSON.stringify(
 function loadPrefs() {
   return normalizePreferences(readStorage(PREFS_KEY));
 }
-function savePrefs() {if (!writeStorage(PREFS_KEY,{...prefs,version:3})) toast('このブラウザでは設定を保存できません');}
+function savePrefs() {if (!writeStorage(PREFS_KEY,{...prefs,version:4})) toast('このブラウザでは設定を保存できません');}
 function normalizeArticle(item) {
   if (!item || !SOURCE_TYPES.includes(item.sourceType) || !safeUrl(item.url) || !item.id || !Number.isFinite(Date.parse(item.publishedAt))) return null;
-  const score = Math.max(0,Math.min(100,Number(item.importanceScore) || 0));
   const text = name => typeof item[name] === 'string' ? item[name] : '';
   item = {...item,detailedSummary:text('detailedSummary').slice(0,650),bodyUrl:safeUrl(text('bodyUrl')),figures:sanitizeFigures(item.figures,text('bodyUrl') || item.url),videoSections:item.summaryBasis === 'video-transcript' ? sanitizeVideoSections(item.videoSections,item.url) : [],videoChapters:sanitizeVideoSections(item.videoChapters,item.url,{chapters:true}),videoRequirements:item.summaryBasis === 'video-transcript' && Array.isArray(item.videoRequirements) ? item.videoRequirements.filter(value=>typeof value === 'string').slice(0,4).map(value=>value.slice(0,180)) : []};
-  return {...item, id:String(item.id), title:text('title'), source:text('source'), summary:text('summary'), whyImportant:text('whyImportant'), personalRelevance:text('personalRelevance'), originalTitle:text('originalTitle'), originalSummary:text('originalSummary'), url:safeUrl(item.url), linkedUrl:safeUrl(item.linkedUrl), discussionUrl:safeUrl(item.discussionUrl), thumbnail:safeUrl(item.thumbnail), importanceScore:score, importanceGrade:gradeFor(score), terms:Array.isArray(item.terms) ? [...new Set(item.terms.filter(term => TERM_NAMES.includes(term)))] : [], topics:Array.isArray(item.topics) ? item.topics.filter(topic => INTERESTS.includes(topic)) : []};
+  return {...item, id:String(item.id), title:text('title'), source:text('source'), summary:text('summary'), whyImportant:text('whyImportant'), personalRelevance:text('personalRelevance'), originalTitle:text('originalTitle'), originalSummary:text('originalSummary'), url:safeUrl(item.url), linkedUrl:safeUrl(item.linkedUrl), discussionUrl:safeUrl(item.discussionUrl), thumbnail:safeUrl(item.thumbnail), ...evaluateImportance(item,{workPriorities:prefs.workPriorities}), terms:Array.isArray(item.terms) ? [...new Set(item.terms.filter(term => TERM_NAMES.includes(term)))] : [], topics:Array.isArray(item.topics) ? item.topics.filter(topic => INTERESTS.includes(topic)) : []};
 }
 function normalizeFeed(data) {
   return {articles:Array.isArray(data?.articles) ? data.articles.slice(0,100).map(normalizeArticle).filter(Boolean) : [], sources:Array.isArray(data?.sources) ? data.sources.filter(source => source && SOURCE_TYPES.includes(source.sourceType)).map(source => ({...source, count:Math.max(0,Number(source.count) || 0)})) : [], generatedAt:Number.isFinite(Date.parse(data?.generatedAt)) ? data.generatedAt : null, checkedAt:Number.isFinite(Date.parse(data?.checkedAt)) ? data.checkedAt : null, refreshAfter:15 * 60000, summary:data?.summary || {mode:'rules'}};
@@ -67,7 +67,8 @@ function statusStrip() {
   return `<div class="status-strip" role="status" aria-live="polite"><span class="status-dot ${live ? 'live' : ''}" aria-hidden="true"></span><span class="status-copy">${esc(statusText())}${refreshFeedback()}</span><button class="sync" data-action="sync" ${loading ? 'disabled' : ''}>${loading ? '確認中' : '更新'}</button></div>`;
 }
 function sourceIsCached(article) {return connection !== 'live' || feed.sources.some(source => source.id === article.sourceId && source.status === 'cached');}
-function visibleArticles() {return feed.articles.filter(article => prefs.sources[article.sourceType] && readerFit(article).eligible);}
+function assessArticle(article) {return {...article,...evaluateImportance(article,{workPriorities:prefs.workPriorities})};}
+function visibleArticles() {return feed.articles.filter(article => prefs.sources[article.sourceType] && readerFit(article).eligible).map(assessArticle);}
 function emptyState(message, retry = false, action = 'settings') {
   return `<div class="empty-state"><div class="empty-symbol" aria-hidden="true">〰</div><p>${esc(message)}</p>${retry ? '<button class="secondary" data-action="sync">もう一度取得する</button>' : `<button class="secondary" data-action="${action}">${action === 'explore' ? 'Exploreで読み返す' : '情報源を確認する'}</button>`}</div>`;
 }
@@ -89,14 +90,14 @@ function sourceStateHtml(source) {
   return `${label}${source.error ? `<small>${esc(sourceErrorLabel(source))}</small>` : source.recoveryReason ? `<small>RSSの配信エラーから復旧・${source.retrievalMethod === 'youtube-page' ? '公開ページで取得' : '再取得に成功'}</small>` : ''}${source.feedError ? `<small>RSS：${esc(sourceErrorLabel({error:source.feedError}))}</small>` : ''}${source.cachedCount ? `<small>うち${source.cachedCount}件は保存分・${esc(fullDate(source.cachedFetchedAt))}</small>` : ''}`;
 }
 function renderToday() {
-  const top = selectToday(feed.articles,{...prefs,understoodArticleIds:reading.understoodIds});
+  const top = selectToday(visibleArticles(),{...prefs,understoodArticleIds:reading.understoodIds});
   const date = new Intl.DateTimeFormat('ja-JP',{month:'long',day:'numeric',weekday:'short',timeZone:'Asia/Tokyo'}).format(new Date());
   const failed = feed.sources.filter(source => ['error','cached','partial'].includes(source.status));
   app.innerHTML = `${header()}<div class="meta"><span>${date}</span><span>未読を最大${TODAY_LIMIT}件</span></div><section class="hero"><h2>今日の重要ニュース</h2><p>いつものAIに、新しくできること。<br>新機能・活用・AIと仕事の変化を最大${TODAY_LIMIT}件。</p></section>${statusStrip()}${failed.length ? `<p class="notice">${esc(failed.map(source => source.name).join('・'))}の一部を取得できませんでした。Settingsで状態を確認できます。</p>` : ''}<div class="digest-label"><span>${top.length ? `${top.length}件・24時間以内 ${top.filter(article => isFreshArticle(article)).length}件` : '最新のダイジェスト'}</span><button class="text-btn" data-action="about">A / B / C の見方</button></div><div id="cards">${top.length ? top.map(newsCard).join('') : loading ? '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>' : emptyState(feed.articles.length ? '直近30日の未読の活用記事はありません。理解済みの記事はExploreで読み返せます。' : '最新記事を取得すると、ここに表示されます。',!feed.articles.length,'explore')}</div>${top.length ? `<div class="digest-end"><b>今日はここまで。</b><span>「理解した！」でTodayから外れます。<br>読み返したい記事はブックマークへ。</span><button class="secondary" data-action="explore">Exploreで読み返す <span aria-hidden="true">›</span></button></div>` : ''}<p class="footnote">本文・字幕など、確認できた内容をまとめています。<br>新着は24時間以内の記事です。<br>候補が少ない日は、直近30日までの未読記事も表示します。</p>`;
 }
 function exploredArticles() {
   const query = exploreSearch.trim().toLocaleLowerCase();
-  return readingCollection(visibleArticles(),reading,collectionFilter).filter(article => (exploreFilter === 'all' || article.sourceType === exploreFilter) && (!query || `${article.title} ${article.originalTitle} ${article.summary} ${article.source} ${article.terms.join(' ')}`.toLocaleLowerCase().includes(query))).sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+  return readingCollection(visibleArticles(),reading,collectionFilter).map(assessArticle).filter(article => (exploreFilter === 'all' || article.sourceType === exploreFilter) && (!query || `${article.title} ${article.originalTitle} ${article.summary} ${article.source} ${article.terms.join(' ')}`.toLocaleLowerCase().includes(query))).sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 }
 function exploreResults() {
   const articles = exploredArticles();
@@ -118,7 +119,7 @@ function switchRow(type,key,on,title,description,disabled = false) {
 }
 function renderSettings() {
   const descriptions = {official:'ChatGPT・Claude・Geminiなどの機能・料金',youtube:'チャエン・AI仙人・PIVOT・安野貴博関連・いけとも・KEITO・OpenAI',note:'noteのAI活用・新機能',github:'SDK収集は停止中（設定は保存できます）',zenn:'ChatGPT・Geminiの使い方・設定',qiita:'ChatGPT・Geminiの実用的な解説',bluesky:'公開投稿から個人で使える情報を選別',hackernews:'海外の話題からAIの活用情報を選別',mastodon:'公開投稿から個人で使える情報を選別'};
-  app.innerHTML = `${header('Settings','自分に合うレーダーに')}<section class="settings-group"><h2>興味のある分野</h2><p class="hint">新機能・料金・具体的な使い方を優先します。Todayの並び順に反映します。</p><div class="chips">${INTERESTS.map(interest => `<button class="chip ${prefs.interests.includes(interest) ? 'active' : ''}" data-interest="${esc(interest)}" aria-pressed="${prefs.interests.includes(interest)}">${esc(interest)}</button>`).join('')}</div></section><section class="settings-group"><h2>情報源</h2><p class="hint">ONにした情報源をTodayとExploreに表示します。</p><div class="toggle-wrap">${SOURCE_TYPES.map(type => switchRow('source',type,prefs.sources[type],labels[type],descriptions[type])).join('')}</div></section><section class="settings-group"><h2>通知の希望</h2><p class="hint">設定を保存できます。通知の配信機能は準備中です。</p><div class="toggle-wrap">${switchRow('notification','important',prefs.notifications.important,'重要ニュース','重要度Aのニュースをお知らせ')}${switchRow('notification','digest',prefs.notifications.digest,'朝のダイジェスト','毎日のまとめをお知らせ')}</div></section><section class="settings-group"><h2>取得状況</h2><p class="hint">${STATIC_FEED ? "情報は約3時間ごとに自動収集。このボタンは最新の公開分を確認します。収集・反映が遅れる場合があります。" : "このボタンで情報源の最新データを確認します。"}</p><div class="tiny-note" role="status" aria-live="polite"><span class="status-dot ${connection === 'live' ? 'live' : ''}"></span> ${esc(statusText())}<br><span>最終収集 ${esc(fullDate(feed.generatedAt))}</span>${refreshFeedback()}<details><summary>情報源ごとの状態</summary>${feed.sources.length ? feed.sources.map(source => `<div class="source-status"><span>${esc(source.name)}</span><span class="${['error','cached','partial'].includes(source.status) ? 'status-warning' : ''}">${sourceStateHtml(source)}</span></div>`).join('') : '<p>まだ取得していません。</p>'}</details></div><button class="secondary" data-action="sync" ${loading ? 'disabled' : ''}>${loading ? '更新しています…' : 'ニュースを更新する'}</button></section><section class="settings-group"><h2>iPhoneで使う</h2><button class="secondary" data-action="install">ホーム画面に追加する方法 <span aria-hidden="true">›</span></button></section><section class="settings-group"><button class="secondary" data-action="reset-learning">学習状況をリセット</button><p class="footnote">学習状況・設定はこの端末に保存されます。<br>AI Radar · Version 1.5.1 · 無料の本文・字幕まとめ</p></section>`;
+  app.innerHTML = `${header('Settings','自分に合うレーダーに')}<section class="settings-group"><h2>重要度で優先する仕事</h2><p class="hint">選んだ仕事への効果を同じ比重で評価します。設定はこの端末に保存されます。</p><div class="chips">${Object.entries(WORK_PRIORITIES).map(([key,label])=>`<button class="chip ${prefs.workPriorities.includes(key) ? 'active' : ''}" data-work-priority="${key}" aria-pressed="${prefs.workPriorities.includes(key)}">${esc(label)}</button>`).join('')}</div></section><section class="settings-group"><h2>興味のある分野</h2><p class="hint">新機能・料金・具体的な使い方を優先します。Todayの並び順に反映します。</p><div class="chips">${INTERESTS.map(interest => `<button class="chip ${prefs.interests.includes(interest) ? 'active' : ''}" data-interest="${esc(interest)}" aria-pressed="${prefs.interests.includes(interest)}">${esc(interest)}</button>`).join('')}</div></section><section class="settings-group"><h2>情報源</h2><p class="hint">ONにした情報源をTodayとExploreに表示します。</p><div class="toggle-wrap">${SOURCE_TYPES.map(type => switchRow('source',type,prefs.sources[type],labels[type],descriptions[type])).join('')}</div></section><section class="settings-group"><h2>通知の希望</h2><p class="hint">設定を保存できます。通知の配信機能は準備中です。</p><div class="toggle-wrap">${switchRow('notification','important',prefs.notifications.important,'重要ニュース','重要度Aのニュースをお知らせ')}${switchRow('notification','digest',prefs.notifications.digest,'朝のダイジェスト','毎日のまとめをお知らせ')}</div></section><section class="settings-group"><h2>取得状況</h2><p class="hint">${STATIC_FEED ? "情報は約3時間ごとに自動収集。このボタンは最新の公開分を確認します。収集・反映が遅れる場合があります。" : "このボタンで情報源の最新データを確認します。"}</p><div class="tiny-note" role="status" aria-live="polite"><span class="status-dot ${connection === 'live' ? 'live' : ''}"></span> ${esc(statusText())}<br><span>最終収集 ${esc(fullDate(feed.generatedAt))}</span>${refreshFeedback()}<details><summary>情報源ごとの状態</summary>${feed.sources.length ? feed.sources.map(source => `<div class="source-status"><span>${esc(source.name)}</span><span class="${['error','cached','partial'].includes(source.status) ? 'status-warning' : ''}">${sourceStateHtml(source)}</span></div>`).join('') : '<p>まだ取得していません。</p>'}</details></div><button class="secondary" data-action="sync" ${loading ? 'disabled' : ''}>${loading ? '更新しています…' : 'ニュースを更新する'}</button></section><section class="settings-group"><h2>iPhoneで使う</h2><button class="secondary" data-action="install">ホーム画面に追加する方法 <span aria-hidden="true">›</span></button></section><section class="settings-group"><button class="secondary" data-action="reset-learning">学習状況をリセット</button><p class="footnote">学習状況・設定はこの端末に保存されます。<br>AI Radar · Version 1.6.0 · 無料の本文・字幕まとめ</p></section>`;
 }
 function render() {
   const searchFocused = document.activeElement?.id === 'exploreSearch';
@@ -171,8 +172,9 @@ function videoGuide(article) {
 }
 sheet.addEventListener('error',event=>{if (event.target.matches?.('.article-figure img')) event.target.closest('.article-figure').classList.add('failed');},true);
 function openNews(id) {
-  const article = findReadingArticle(id,feed.articles,reading) || (openedArticle?.id === id ? openedArticle : null);
-  if (!article) return;
+  const savedArticle = findReadingArticle(id,feed.articles,reading) || (openedArticle?.id === id ? openedArticle : null);
+  if (!savedArticle) return;
+  const article=assessArticle(savedArticle);
   openedArticle = article;
   backArticleId = null;
   const posted = SOCIAL_TYPES.includes(article.sourceType);
@@ -184,7 +186,7 @@ function openNews(id) {
     <h2 id="detailTitle">${esc(article.title)}</h2><p class="detail-meta">${posted ? '投稿' : '公開'} ${esc(fullDate(article.publishedAt,article.publishedAtPrecision))}${sourceIsCached(article) ? ' · 保存済み記事' : ''}</p>
     <div class="explain blue"><h3>要点</h3><p>${esc(article.summary)}</p></div><div class="explain lilac"><h3>なぜ重要か</h3><p>${esc(article.whyImportant)}</p></div><div class="explain mint"><h3>自分にどう関係するか</h3><p>${esc(personalHint(article))}</p></div>
     <div class="explain long-summary"><h3>${article.sourceType === 'youtube' && !article.detailedSummary ? '動画の内容を確認する' : '詳しいまとめ'}</h3>${article.detailedSummary ? article.detailedSummary.split(/\n+/).filter(Boolean).map(paragraph=>`<p>${esc(paragraph)}</p>`).join('') : `<p>${article.sourceType === 'youtube' ? '文字起こしを自動取得できず、内容は未確認です。元動画の「文字起こしを表示」や下のチャプターから確認できます。' : '日本語の本文を取得できなかったため、詳しいまとめはまだありません。原文で内容を確認できます。'}</p>`}<span class="summary-basis">${esc(basisLabel)}${article.detailedSummary && article.summaryState === 'limited' && article.sourceType !== 'youtube' ? '。取得できた文章が短いため、まとめも短めです。' : ''}</span></div>
-    ${videoGuide(article)}${articleFigures(article)}
+    <details class="original"><summary>この重要度の理由</summary><p>${esc(article.importanceReason)}</p><p class="footnote">${article.importanceScore}点 / 100点<br>仕事との関係 ${article.importanceFactors.relevance}/40 · 具体性 ${article.importanceFactors.action}/25 · 効果 ${article.importanceFactors.impact}/20 · 根拠 ${article.importanceFactors.evidence}/10 · 新しさ ${article.importanceFactors.freshness}/5</p>${article.importanceLimits.length ? `<p class="footnote">判定を調整する条件：${article.importanceLimits.map(esc).join("。")}</p>` : ""}</details>${videoGuide(article)}${articleFigures(article)}
     <h3 class="related-heading">関連AI用語</h3><div class="tags">${article.terms.map(term => `<button class="tag" data-term="${esc(term)}" data-back-id="${esc(article.id)}">${esc(term)}</button>`).join('') || '<span class="sub">この記事に関連する用語はありません。</span>'}</div>
     <details class="original"><summary>原題・フィードの抜粋</summary><b>${esc(article.originalTitle)}</b>${article.originalSummary ? `<p>${esc(article.originalSummary.slice(0,700))}</p>` : '<p>この情報源には本文の抜粋がありません。</p>'}</details>
     <p class="footnote">活用のヒント・重要度は編集上の目安です。${posted ? '<br>表示日は投稿日時です。共有された記事の公開日とは異なる場合があります。' : ''}</p>
@@ -200,7 +202,7 @@ function openTerm(term, articleId = null) {
 }
 function openInfo(type) {
   backArticleId = null;
-  detail.innerHTML = type === 'install' ? '<h2 id="detailTitle">ホーム画面から、毎日。</h2><div class="explain blue"><h3>iPhoneのSafariで開く</h3><p>公開したAI RadarのURLをSafariで開きます。</p></div><div class="explain lilac"><h3>共有からホーム画面へ</h3><p>Safariの共有メニューを開き、「ホーム画面に追加」を選んで追加します。</p></div><div class="explain mint"><h3>次からはアイコンをタップ</h3><p>ニュースは開いたときに更新します。通信できないときも、前回取得した記事と用語集を確認できます。</p></div>' : '<h2 id="detailTitle">ニュースの読み方</h2><div class="explain grade-explanation-a"><h3>A · まずチェック</h3><p>使っているAIの新機能・料金変更など、先に確認したい情報（85点以上）。</p></div><div class="explain grade-explanation-b"><h3>B · 試す候補</h3><p>自分の用途に合えば試せる使い方・設定（72〜84点）。</p></div><div class="explain grade-explanation-c"><h3>C · 参考情報</h3><p>個人の使用例や周辺情報。時間があるときの参考に（71点以下）。</p></div><p class="footnote">重要度は情報源・内容・公開日の新しさから算出する目安です。Todayは理解済みの記事を除いた最大10件です。直近7日を優先し、候補が少ない場合は30日まで広げます。本文や字幕を確認できた範囲でまとめ、元記事の図解や動画の実演箇所も表示します。</p>';
+  detail.innerHTML = type === 'install' ? '<h2 id="detailTitle">ホーム画面から、毎日。</h2><div class="explain blue"><h3>iPhoneのSafariで開く</h3><p>公開したAI RadarのURLをSafariで開きます。</p></div><div class="explain lilac"><h3>共有からホーム画面へ</h3><p>Safariの共有メニューを開き、「ホーム画面に追加」を選んで追加します。</p></div><div class="explain mint"><h3>次からはアイコンをタップ</h3><p>ニュースは開いたときに更新します。通信できないときも、前回取得した記事と用語集を確認できます。</p></div>' : '<h2 id="detailTitle">ニュースの読み方</h2><div class="explain grade-explanation-a"><h3>A · 自分に重要</h3><p>優先する仕事に直結し、具体的な使い方や判断材料がある情報（85点以上）。普段使うAIの料金・利用条件の重要な変更も対象です。</p></div><div class="explain grade-explanation-b"><h3>B · 試す価値あり</h3><p>用途に合えば役立つ情報や、詳しい使い方・利用条件を確かめたい候補（60〜84点）。</p></div><div class="explain grade-explanation-c"><h3>C · 参考情報</h3><p>周辺の動向、基礎的な話、仕事との関係や具体的な判断材料が少ない情報（59点以下）。</p></div><p class="footnote">仕事との関係40点・具体性25点・効果20点・根拠10点・新しさ5点で評価します。公式発表という理由だけではAにせず、内容を確認できたYouTubeにもAを付けます。Aの件数は固定しません。Todayは理解済みの記事を除いた最大10件です。直近7日を優先し、候補が少ない場合は30日まで広げます。本文や字幕を確認できた範囲でまとめ、元記事の図解や動画の実演箇所も表示します。</p>';
   openSheet();
 }
 function toast(message,undo = null) {
@@ -281,6 +283,11 @@ function handleClick(event) {
     const term = button.dataset.understand, wasDone = prefs.understood.includes(term), articleId = backArticleId;
     prefs.understood = wasDone ? prefs.understood.filter(value => value !== term) : [...new Set([...prefs.understood,term])];
     savePrefs(); render(); openTerm(term,articleId); toast(wasDone ? '未学習に戻しました' : '理解済みにしました'); return;
+  }
+  if (button.dataset.workPriority) {
+    const key=button.dataset.workPriority;
+    prefs.workPriorities=prefs.workPriorities.includes(key) ? prefs.workPriorities.filter(value=>value!==key) : [...prefs.workPriorities,key];
+    savePrefs(); renderSettings(); return;
   }
   if (button.dataset.interest) {
     const interest = button.dataset.interest;
