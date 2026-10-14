@@ -4,12 +4,19 @@
     {"id":"google-ai","name":"Google AI","family":"Google","url":"https://blog.google/innovation-and-ai/technology/ai/rss/","sourceType":"official"},
     {"id":"google-japan","name":"Google Japan","family":"Google","url":"https://blog.google/intl/ja-jp/rss/","sourceType":"official","aiOnly":true}
   ],
-  "anthropic": [{"id":"anthropic","name":"Anthropic","family":"Anthropic","url":"https://www.anthropic.com/news","sourceType":"official"}],
+  "anthropic": [
+    {"id":"anthropic","name":"Anthropic","family":"Anthropic","url":"https://www.anthropic.com/news","sourceType":"official"}
+  ],
   "github": [
     {"id":"openai-python","name":"openai-python","family":"OpenAI","url":"https://github.com/openai/openai-python/releases.atom","sourceType":"github","enabled":false},
     {"id":"anthropic-sdk","name":"anthropic-sdk-python","family":"Anthropic","url":"https://github.com/anthropics/anthropic-sdk-python/releases.atom","sourceType":"github","enabled":false}
   ],
-  "note": [{"id":"note-official","name":"note公式","family":"note","handle":"info","aiOnly":true}],
+  "note": [
+    {"id":"note-official","name":"note公式","family":"note","handle":"info","aiOnly":true},
+    {"id":"note-notebooklm","name":"note · NotebookLM","family":"note","tag":"NotebookLM","aiOnly":true},
+    {"id":"note-obsidian","name":"note · ObsidianとAI","family":"note","tag":"Obsidian","aiOnly":true},
+    {"id":"note-ai-work","name":"note · AI活用","family":"note","tag":"AI活用","aiOnly":true}
+  ],
   "youtube": [
     {"id":"youtube-openai","name":"OpenAI YouTube","family":"OpenAI","channelId":"UCXZCJLdBC09xxGZ6gcdrc6A","channelUrl":"https://www.youtube.com/@OpenAI/videos"},
     {"id":"youtube-keito","name":"KEITO · AI&WEB","family":"KEITO","channelId":"UCfapRkagDtoQEkGeyD3uERQ","channelUrl":"https://www.youtube.com/@keitoaiweb/videos","aiOnly":true},
@@ -23,13 +30,21 @@
   ],
   "zenn": [
     {"id":"zenn-chatgpt","name":"Zenn · ChatGPT","family":"Zenn","topic":"chatgpt","aiOnly":true},
-    {"id":"zenn-gemini","name":"Zenn · Gemini","family":"Zenn","topic":"gemini","aiOnly":true}
+    {"id":"zenn-gemini","name":"Zenn · Gemini","family":"Zenn","topic":"gemini","aiOnly":true},
+    {"id":"zenn-notebooklm","name":"Zenn · NotebookLM","family":"Zenn","topic":"notebooklm","aiOnly":true}
   ],
   "qiita": [
     {"id":"qiita-chatgpt","name":"Qiita · ChatGPT","family":"Qiita","tag":"chatgpt","aiOnly":true},
-    {"id":"qiita-gemini","name":"Qiita · Gemini","family":"Qiita","tag":"gemini","aiOnly":true}
+    {"id":"qiita-gemini","name":"Qiita · Gemini","family":"Qiita","tag":"gemini","aiOnly":true},
+    {"id":"qiita-notebooklm","name":"Qiita · NotebookLM","family":"Qiita","tag":"notebooklm","aiOnly":true}
   ],
-  "bluesky": [{"id":"bluesky-simon","name":"Simon Willison · Bluesky","family":"Simon Willison","actor":"simonwillison.net","aiOnly":true,"limit":30}],
-  "hackernews": [{"id":"hackernews-top","name":"Hacker News","family":"Hacker News","aiOnly":true,"limit":40}],
-  "mastodon": [{"id":"mastodon-simon","name":"Simon Willison · Mastodon","family":"Simon Willison","instance":"https://fedi.simonwillison.net","account":"simon","accountId":"109276369291252172","aiOnly":true}]
+  "bluesky": [
+    {"id":"bluesky-simon","name":"Simon Willison · Bluesky","family":"Simon Willison","actor":"simonwillison.net","aiOnly":true,"limit":30}
+  ],
+  "hackernews": [
+    {"id":"hackernews-top","name":"Hacker News","family":"Hacker News","aiOnly":true,"limit":40}
+  ],
+  "mastodon": [
+    {"id":"mastodon-simon","name":"Simon Willison · Mastodon","family":"Simon Willison","instance":"https://fedi.simonwillison.net","account":"simon","accountId":"109276369291252172","aiOnly":true}
+  ]
 }

@@ -1,4 +1,4 @@
-import {normalizeWorkPriorities} from './importance.js';
+import {normalizeWorkPriorities,gradeTodayArticles,todayGradeCounts,workDiscoveryPriority,gradeFor} from './importance.js';
 export {gradeFor,GRADE_LABELS} from './importance.js';
 export const SOURCE_TYPES = ['official','youtube','note','github','zenn','qiita','bluesky','hackernews','mastodon'];
 export const SOCIAL_TYPES = ['bluesky','hackernews','mastodon'];
@@ -30,13 +30,15 @@ export function readerFit(article) {
   const title = String(article.originalTitle || article.title || '').normalize('NFKC');
   const excerpt = `${String(article.originalSummary || '').slice(0,600)} ${String(article.detailedSummary || '').slice(0,600)} ${String(article.summary || '').slice(0,300)}`;
   const video = article.sourceType === 'youtube';
+  if (/AI初心者|超初心者|ゼロから|完全初心者|基本(?:的な)?(?:機能|使い方)|の基本と/u.test(title) && !/脱初心者/u.test(title)) return {eligible:false,category:'',reason:'初歩的な内容が中心',priority:0};
+  if (/投資勉強|投資戦略|投資信託|ETF\b|銘柄|株価|(?:日本|インド|半導体|AI|米国)株|日経平均/u.test(title)) return {eligible:false,category:'',reason:'投資が中心',priority:0};
   // 以前の端末キャッシュも、収集を停止したチャンネルへ戻さない。保存したブックマークは別に読める。
   if (video && (article.sourceId === 'youtube-mikimiki' || article.sourceFamily === 'mikimiki' || /mikimiki/i.test(article.source || ''))) return {eligible:false,category:'',reason:'収集を停止したチャンネル',priority:0};
   if (video && /超初心者|ゼロから|完全初心者|入門|(?:基礎|基本).{0,12}使い方|(?:基礎|基本)(?:を|から|・|と|の)?(?:学|解説|理解|徹底)|使い方.{0,12}(?:基礎|基本)/u.test(title) && !/脱初心者|脱・初心者/u.test(title)) return {eligible:false,category:'',reason:'初歩的な操作・基礎講座',priority:0};
   if (video && /投資戦略|投資信託|ETF\b|銘柄|株価|(?:日本|インド|半導体|AI|米国)株|日経平均|PIVOT BASEBALL|MLB\b|大谷翔平/u.test(title)) return {eligible:false,category:'',reason:'投資・スポーツが中心',priority:0};
   if (video && /募集中|採用情報|イベント開催|参加募集|セミナー告知/u.test(title)) return {eligible:false,category:'',reason:'募集・宣伝が中心',priority:0};
   const primary = /chatgpt|claude|gemini/i.test(title);
-  const product = /chatgpt|claude|gemini|notebook\s?lm|sora|canva|copilot|perplexity|midjourney|manus|grok|\bdots\b|gpt[- ]?\d/i.test(title);
+  const product = /chatgpt|claude|gemini|notebook\s?lm|sora|canva|obsidian|zotero|copilot|perplexity|midjourney|manus|grok|\bdots\b|gpt[- ]?\d/i.test(title);
   const aiUse = /\bai\b|生成AI|人工知能|エージェント|mcp/i.test(title);
   const contextEpisode = video && aiUse && /ニュース|トレンド|最前線|社会|民主主義|政策|規制|安全|セキュリティ|漏洩|情報流出|仕事|働|雇用|人材|教育|学習/u.test(title) && !/\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|実装|アーキテクチャ|環境構築/i.test(title);
   const howTo = /how (?:to|i)|guide|tips|tutorial|prompt|使い方|活用|手順|設定|コツ|入門|初心者|プロンプト|試して|使って|やり方|できること|使える|方法|比較|選び方|時短|徹底解説|テクニック|習慣|仕事術|使い分け|ノウハウ/i.test(title);
@@ -62,7 +64,8 @@ export function readerFit(article) {
   }
   // タイトルがモデル名だけの発表は、一般利用できる製品への言及も確認する。
   const appAnnouncement = !product && /gpt[- ]?\d|opus|sonnet|haiku/i.test(title) && /chatgpt|claude|gemini.*app/i.test(excerpt) && feature;
-  const eligible = (product && (pricing || feature || howTo || consumerUse || modelUpdate)) || appAnnouncement || (aiUse && (howTo || video && (consumerUse || pricing))) || contextEpisode || delegatedWork;
+  const workUseCase = (product || aiUse) && workDiscoveryPriority(article)>0 && /読ませ|読み込|整理|管理|連携|活用|比較|検証|資料|PDF|出典|決まり|下書き|添削|点検/i.test(title);
+  const eligible = (product && (pricing || feature || howTo || consumerUse || modelUpdate)) || appAnnouncement || (aiUse && (howTo || video && (consumerUse || pricing))) || contextEpisode || delegatedWork || workUseCase;
   const category = pricing && (product || aiUse) ? '料金・利用条件' : howTo ? '使い方・設定' : contextEpisode && !product ? 'AIと仕事・社会' : feature || appAnnouncement ? '新機能' : '活用情報';
   return {eligible,category:eligible ? category : '',reason:eligible ? category === 'AIと仕事・社会' ? 'AIが仕事・社会に与える変化' : primary ? '使っているAIの変更・活用' : '個人で試せるAIの活用' : '具体的な利用方法が確認できない',priority:eligible ? (primary ? 12 : contextEpisode ? 6 : 5) + (pricing ? 8 : feature ? 6 : howTo ? 5 : 0) : 0};
 }
@@ -95,9 +98,8 @@ export function selectToday(articles, prefs, now = Date.now()) {
   const recent = candidates.filter(article => now - Date.parse(article.publishedAt) <= 7 * 24 * HOUR);
   const extended = candidates.filter(article => now - Date.parse(article.publishedAt) <= 30 * 24 * HOUR);
   const extendedComplete = extended.filter(article=>article.detailedSummary?.length>=140);
-  // A/B candidates across the allowed window outrank C padding, even when a C summary is longer.
-  const priorityReading = extended.filter(article=>article.importanceScore>=60 && article.summaryBasis!=='unavailable');
-  const pool = priorityReading.length>=TODAY_LIMIT ? priorityReading : recent.filter(article=>article.detailedSummary?.length>=140).length>=TODAY_LIMIT ? recent : extendedComplete.length>=TODAY_LIMIT ? extendedComplete : recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : extended;
+  const primaryPool = recent.filter(article=>article.detailedSummary?.length>=140).length>=TODAY_LIMIT ? recent : extendedComplete.length>=TODAY_LIMIT ? extendedComplete : recent.filter(article => article.summaryBasis !== 'unavailable').length >= TODAY_LIMIT ? recent : extended;
+  const pool=[...new Map([...primaryPool,...extended.filter(article=>gradeFor(article.importanceScore)==='A' && article.summaryBasis!=='unavailable')].map(article=>[article.id,article])).values()];
   const readable = pool.filter(article => !article.summaryBasis || article.summaryBasis !== 'unavailable');
   const complete = readable.filter(article=>article.detailedSummary?.length>=140);
   // If ten substantive summaries exist, Today is readable without opening videos.
@@ -110,16 +112,18 @@ export function selectToday(articles, prefs, now = Date.now()) {
     if (selected.length >= TODAY_LIMIT || selected.includes(article) || (families.get(family) || 0) >= 3) return;
     selected.push(article); families.set(family, (families.get(family) || 0) + 1);
   };
-  // 最大10件。新着の実用記事を最大6枠確保し、理解済みは候補に戻さない。
-  const fresh = ranked.filter(article => isFreshArticle(article,now));
-  for (const article of fresh) {
-    if (selected.length === 6) break;
-    add(article);
+  const targets=todayGradeCounts(Math.min(TODAY_LIMIT,ranked.length));
+  const fresh=ranked.filter(article=>isFreshArticle(article,now));
+  // Qualified A candidates come first. Never promote B/C to manufacture the ratio.
+  for (const grade of ['A','B','C']) {
+    const cohort=ranked.filter(article=>gradeFor(article.importanceScore)===grade).sort((a,b)=>(grade==='A' ? workDiscoveryPriority(b)-workDiscoveryPriority(a) : 0) || Number(isFreshArticle(b,now))-Number(isFreshArticle(a,now)) || rank(b)-rank(a));
+    for (const article of cohort) {
+      if (selected.filter(item=>gradeFor(item.importanceScore)===grade).length>=targets[grade]) break;
+      add(article);
+    }
   }
-  for (const article of ranked) {
-    if (selected.length === TODAY_LIMIT) break;
-    add(article);
-  }
+  // Backfill shortages with genuine useful articles, retaining their original grade.
+  for (const article of ranked) {if (selected.length===TODAY_LIMIT) break;add(article);}
   // 新着を押し出さず、直近48時間の動画だけ1枠を確保。新着がなければ7日まで。
   const videoAge = fresh.length ? 48 * HOUR : 7 * 24 * HOUR;
   const videos = ranked.filter(item => item.sourceType === 'youtube' && now - Date.parse(item.publishedAt) <= videoAge);
@@ -127,7 +131,7 @@ export function selectToday(articles, prefs, now = Date.now()) {
   if (video && !selected.some(item => item.sourceType === 'youtube')) {
     const family = video.sourceFamily || video.source;
     if ((families.get(family) || 0) < 3) {
-      const replace = selected.findLastIndex(article => isFreshArticle(video,now) || !isFreshArticle(article,now));
+      const replace = selected.findLastIndex(article => gradeFor(article.importanceScore)===gradeFor(video.importanceScore) && (isFreshArticle(video,now) || !isFreshArticle(article,now)));
       if (selected.length < TODAY_LIMIT || replace >= 0) {
         if (selected.length === TODAY_LIMIT) {const [removed] = selected.splice(replace,1); const removedFamily = removed.sourceFamily || removed.source; families.set(removedFamily,families.get(removedFamily) - 1);}
         add(video);
@@ -140,7 +144,7 @@ export function selectToday(articles, prefs, now = Date.now()) {
       selected.push(article);
     }
   }
-  return selected;
+  return gradeTodayArticles(selected.sort((a,b)=>Number(isFreshArticle(b,now))-Number(isFreshArticle(a,now)) || rank(b)-rank(a)));
 }
 
 export function isFreshArticle(article,now = Date.now()) {
@@ -155,6 +159,8 @@ export function limitFeedArticles(articles,limit = 100,now = Date.now()) {
   selectToday(newest,{sources:{},interests:['新機能・料金','使い方・設定']},now).forEach(add);
   // 投稿数の多い情報源だけで100件が埋まらないよう、各種類の最新5件を確保。
   for (const type of SOURCE_TYPES) newest.filter(article => article.sourceType === type).slice(0,5).forEach(add);
+  // Keep up to forty practical work discoveries before generic volume fills the feed.
+  newest.filter(article=>now-Date.parse(article.publishedAt)<=30*24*HOUR && workDiscoveryPriority(article)>0).sort((a,b)=>workDiscoveryPriority(b)-workDiscoveryPriority(a) || Date.parse(b.publishedAt)-Date.parse(a.publishedAt)).slice(0,40).forEach(add);
   newest.forEach(add);
   return [...selected.values()].sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 }

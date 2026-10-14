@@ -25,7 +25,7 @@ test('The three confirmed work priorities have equal weight and preserve existin
 test('A means a verified practical benefit to priority work, with bounded explainable factors',()=>{
   const result=assess(article());
   assert.equal(result.importanceGrade,'A');
-  assert.equal(result.importanceVersion,2);
+  assert.equal(result.importanceVersion,3);
   assert.deepEqual(result.importanceAreas,['research']);
   assert.match(result.importanceReason,/論文・情報の整理/);
   assert.equal(Object.values(result.importanceFactors).reduce((a,b)=>a+b,0),result.importanceScore);
@@ -114,11 +114,13 @@ test('Freshness has only five points and does not determine personal relevance',
   assert.equal(assess(article({publishedAt:'unknown'})).importanceFactors.freshness,0);
 });
 
-test('Today uses ten A/B candidates before low relevance C padding with longer summaries',()=>{
+test('Today keeps a genuine C candidate without promoting B articles to fill an A shortage',()=>{
   const useful=Array.from({length:10},(_,index)=>({...article({id:`useful-${index}`,sourceFamily:`family-${index}`,publishedAt:'2026-10-07T06:00:00Z',detailedSummary:'具体的に使える情報です。',importanceScore:70,summaryBasis:'feed'})}));
   const low=article({id:'low',importanceScore:30});
   const today=selectToday([...useful,low],normalizePreferences(),now);
-  assert.equal(today.length,10);assert.ok(today.every(value=>value.id!=='low'));
+  assert.equal(today.length,10);assert.ok(today.some(value=>value.id==='low'));
+  assert.equal(today.filter(value=>value.importanceGrade==='A').length,0);
+  assert.equal(today.filter(value=>value.importanceGrade==='B').length,9);
 });
 
 test('Published evaluation data is bounded and does not include user profile or private chat inputs',()=>{
@@ -136,7 +138,7 @@ test('The collection pipeline evaluates after summaries and publishes a reproduc
   const rss=`<rss><channel><item><title>${article().originalTitle}</title><link>https://example.com/article</link><pubDate>Tue, 13 Oct 2026 06:00:00 GMT</pubDate><description>${article().detailedSummary}</description></item></channel></rss>`;
   const result=await collectFeed({rss:[source]},{now,fetchImpl:async(url,options)=>{assert.ok(!options?.headers?.Authorization);assert.equal(url,source.url);return new Response(rss);}});
   assert.equal(result.articles.length,1);
-  assert.equal(result.articles[0].importanceVersion,2);
+  assert.equal(result.articles[0].importanceVersion,3);
   assert.equal(result.articles[0].importanceScore,assess(result.articles[0]).importanceScore);
   assert.equal(result.generatedAt,new Date(now).toISOString());
 });

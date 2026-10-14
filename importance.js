@@ -1,5 +1,6 @@
 // Shared, deterministic rules. Personal settings stay on the device; no chat history is input.
-export const IMPORTANCE_VERSION = 2;
+export const IMPORTANCE_VERSION = 3;
+export const TODAY_GRADE_WEIGHTS = {A:2,B:5,C:3};
 export const WORK_PRIORITIES = {research:'論文・情報の整理',documents:'資料・文章作成',automation:'作業の自動化',media:'画像・動画の活用'};
 export const DEFAULT_WORK_PRIORITIES = ['research','documents','automation'];
 export const GRADE_LABELS = {A:'自分に重要',B:'試す価値あり',C:'参考情報'};
@@ -9,11 +10,11 @@ export function normalizeWorkPriorities(value) {
 }
 const domains = {
   research:/論文|文献|pubmed|zotero|notebook\s?lm|perplexity|deep research|リサーチ|情報収集|調査レポート|PDF|知識管理|obsidian|ノート整理|出典|根拠を確認|literature|papers?\b|research (?:report|assistant|workflow)/iu,
-  documents:/資料|スライド|プレゼン|powerpoint|pptx|excel|表計算|スプレッドシート|報告書|申請書|抄録|原稿|執筆|文章作成|文書|word\b|docx|図解|図表|校正|翻訳|英語|レポート|slides?|spreadsheet|documents?|writing/iu,
+  documents:/資料|スライド|プレゼン|powerpoint|pptx|excel|表計算|スプレッドシート|報告書|申請書|抄録|原稿|執筆|文章作成|下書き|添削|要約|文書|word\b|docx|図解|図表|校正|翻訳|英語|レポート|slides?|spreadsheet|documents?|writing/iu,
   automation:/自動化|AI秘書|繰り返し.*(?:作業|業務)|定期.*(?:収集|実行|調査|配信)|業務ワークフロー|フォルダ.*整理|ファイル整理|gmail|google (?:drive|workspace)|予定.*(?:確認|管理|登録)|議事録|automation|(?:scheduled|daily|document) (?:task|workflow)|\bdots\b|\bmanus\b/iu,
   media:/動画|映像|画像|音声|録音|字幕|編集|文字起こし|multimodal|video|image|audio/iu
 };
-const practical = /手順|操作|使い方|活用|実演|添付|アップロード|選択|入力|クリック|連携|設定|依頼|指示|比較|使い分け|試した|検証|how to|using|hands.on/iu;
+const practical = /手順|操作|使い方|活用|実演|添付|アップロード|選択|入力|クリック|連携|設定|依頼|指示|比較|使い分け|読ませ|取り込|ノート|点検|試した|検証|how to|using|hands.on/iu;
 const materialChange = /料金|価格|値上げ|値下げ|課金|利用枠|上限|制限|契約|プラン|privacy|データ.*(?:保存|学習|送信|利用)|情報漏洩|外部送信|安全.*設定|security|subscription|pricing|usage limit/iu;
 const importantChange = /新機能|新モデル|新しい|追加|公開|発表|アップデート|提供開始|利用でき|できるよう|使える|対応|生成|作成|整理|改善|効率|時短|常時|まとめ|カスタマイズ|比較|launch|introduc|update|release|new\b|available/iu;
 const developerOnly = /\bapi\b|\bsdk\b|\bcli\b|python|typescript|javascript|kubernetes|docker|\badk\b|agent development kit|ハッカソン|MCP Events|インフラ|サーバー実装|環境構築|ベンチマーク|benchmark|エンドポイント|ファインチューニング/iu;
@@ -32,7 +33,7 @@ export function evaluateImportance(article,{now=Date.now(),workPriorities}={}) {
   const text=`${title} ${body}`;
   const matches=priorities.filter(key=>domains[key].test(text));
   const titleMatches=matches.filter(key=>domains[key].test(title));
-  const familiar=/chatgpt|claude|gemini|codex|notebook\s?lm|\bdots\b|openai/iu.test(text);
+  const familiar=/chatgpt|claude|gemini|codex|obsidian|zotero|notebook\s?lm|\bdots\b|openai/iu.test(text);
   const primary=/chatgpt|claude|gemini|codex|openai/iu.test(title);
   const practicalTitle=practical.test(title),practicalBody=practical.test(body);
   const confirmedVideo=article.summaryBasis==='video-transcript' && article.transcriptStatus==='available';
@@ -68,6 +69,7 @@ export function evaluateImportance(article,{now=Date.now(),workPriorities}={}) {
   if (/超初心者|完全初心者|入門|基礎を|基本操作/iu.test(title) && !/脱初心者/iu.test(title)) {ceiling=Math.min(ceiling,59);limitations.push('基礎的な内容が中心');}
   if (/BTS|ファン向け|推し活|ゲーム実況|AI美女|美少女/iu.test(title)) {ceiling=Math.min(ceiling,59);limitations.push('主な仕事との関係が薄い');}
   if (/Android(?:専用|限定)|(?:高齢者|初心者).*(?:シンプルガイド|操作ガイド)/iu.test(title) && !/iPhone|iOS/iu.test(text)) {ceiling=Math.min(ceiling,59);limitations.push('iPhoneでの自分の利用に直結しにくい');}
+  if (/ハルシネーション.*(?:完全)?ゼロ|100[%％].*正確|絶対.*間違え|検証不要/u.test(title)) {ceiling=Math.min(ceiling,84);limitations.push('効果を断言する表現は元の根拠を確認');}
   if (futureOnly.test(title) || futureOnly.test(body)) {ceiling=Math.min(ceiling,84);limitations.push('一部の機能は提供時期が未確定');}
   if (limitedApplication) {ceiling=Math.min(ceiling,84);limitations.push('実例の再現に必要な手順・条件が未公開');}
   if (/学生|大学生|転職活動|職務経歴書|面接対策/u.test(title+' '+body.slice(0,250))) {ceiling=Math.min(ceiling,84);limitations.push('特定の立場・用途が前提');}
@@ -82,5 +84,36 @@ export function evaluateImportance(article,{now=Date.now(),workPriorities}={}) {
   const grade=gradeFor(score),area=matches.map(key=>WORK_PRIORITIES[key]).join('・');
   const main=directChange ? '普段使うAIの料金・利用条件・データの扱いを見直す判断材料です。' : area ? `${area}に関係する情報です。` : familiar ? '普段使うAIの情報ですが、優先する仕事への具体的な効果は限定的です。' : '周辺の動向を知るための情報です。';
   const reason=grade==='A' ? `${main}${steps ? '具体的な操作・実例を確認でき、試す価値が高いためAです。' : '使い方や変更内容を確認でき、今の作業や判断への影響が大きいためAです。'}` : `${main}${limitations.length ? limitations.slice(0,2).join('。')+'。' : grade==='B' ? '用途に合うか試す候補です。' : '今すぐ行動を変える材料は少なく、参考として扱います。'}`;
-  return {importanceVersion:IMPORTANCE_VERSION,importanceScore:score,importanceGrade:grade,importanceReason:reason.slice(0,240),importanceFactors:factors,importanceAreas:matches,importanceLimits:limitations.slice(0,3)};
+  return {importanceVersion:IMPORTANCE_VERSION,importanceScope:'article',importancePlacement:null,importanceScore:score,importanceGrade:grade,importanceReason:reason.slice(0,240),importanceFactors:factors,importanceAreas:matches,importanceLimits:limitations.slice(0,3)};
+}
+
+// Allocate whole articles with the smallest rounding error (10 articles = 2 / 5 / 3).
+export function todayGradeCounts(total) {
+  total=Math.max(0,Math.floor(Number(total) || 0));
+  const entries=Object.entries(TODAY_GRADE_WEIGHTS).map(([grade,weight])=>({grade,weight,count:Math.floor(total*weight/10),remainder:total*weight%10}));
+  const remainder=total-entries.reduce((sum,item)=>sum+item.count,0);
+  const order=[...entries].sort((a,b)=>b.remainder-a.remainder || b.weight-a.weight);
+  for(let index=0;index<remainder;index++) order[index].count++;
+  return Object.fromEntries(entries.map(item=>[item.grade,item.count]));
+}
+
+export function gradeTodayArticles(articles) {
+  const ranked=[...articles].sort((a,b)=>b.importanceScore-a.importanceScore || (b.importanceFactors?.relevance || 0)-(a.importanceFactors?.relevance || 0) || Date.parse(b.publishedAt)-Date.parse(a.publishedAt) || (String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0));
+  const ranks=new Map(ranked.map((article,index)=>[article.id,index+1]));
+  const counts=Object.fromEntries(['A','B','C'].map(grade=>[grade,articles.filter(article=>gradeFor(article.importanceScore)===grade).length]));
+  const targets=todayGradeCounts(articles.length);
+  return articles.map(article=>({...article,importanceScope:'today',importanceGrade:gradeFor(article.importanceScore),importancePlacement:{rank:ranks.get(article.id),total:articles.length,counts:{...counts},targets:{...targets}}}));
+}
+
+// Find practical work topics before body fetching; this never upgrades a grade.
+export function workDiscoveryPriority(article) {
+  const title=String(article.originalTitle || article.title || '').normalize('NFKC');
+  const areas=DEFAULT_WORK_PRIORITIES.filter(key=>domains[key].test(title));
+  return areas.length ? areas.length*20+(practical.test(title) ? 10 : 0) : 0;
+}
+
+// A single context makes Today, Explore and an article's detail show the same grade.
+export function applyTodayGrades(articles,today) {
+  const byId=new Map(today.map(article=>[article.id,article]));
+  return articles.map(article=>byId.get(article.id) || article);
 }
