@@ -41,7 +41,10 @@ export function evaluateImportance(article,{now=Date.now(),workPriorities}={}) {
   const limitedApplication=/ハンズオンではなく|(?:構築|操作|実装)方法.{0,15}(?:全手順|すべて).{0,20}(?:未公開|公開されていません)|(?:利用ツール|完成.*指示文).{0,25}公開されていません/u.test(body);
   const steps=confirmedVideo && !limitedApplication && article.videoSections?.some(section=>section.steps?.length>=2);
   const actionableBody=bodyAvailable && practicalBody && !limitedApplication;
-  const directChange=primary && materialChange.test(title) && bodyAvailable;
+  // A roundup's API discount is not a change to an individual's chat subscription.
+  const apiPrice=/API.{0,15}(?:料金|価格|単価)|API pricing|(?:入力|出力).{0,12}(?:100\s*万|百万|million).{0,6}トークン/iu.test(text);
+  const consumerPrice=/個人向けプラン|月額|月(?:々|払い)|(?:chatgpt|claude|gemini).{0,15}(?:plus|pro|free|無料プラン)|サブスクリプション|subscription/iu.test(body);
+  const directChange=primary && materialChange.test(title) && bodyAvailable && (!apiPrice || consumerPrice);
   const titleDeveloper=developerOnly.test(title);
   const developerTerms=[...new Set((text.match(/\bapi\b|\bsdk\b|python|typescript|javascript|kubernetes|docker|エンドポイント|環境構築|コーディング|実装|ベンチマーク/giu) || []).map(value=>value.toLowerCase()))];
   const developerAudience=/開発者|エンジニア|API.{0,25}(?:送信|入力|エンドポイント)|(?:入力|出力).{0,10}(?:100\s*万|百万|million).{0,6}トークン|100\s*万.{0,6}(?:入力|出力)トークン|MCPサーバー|コーディングパイプライン|ソースコード.{0,15}(?:読み込み|実装)|gemini-\d/iu.test(text);

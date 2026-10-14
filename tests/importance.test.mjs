@@ -70,6 +70,13 @@ test('Engineering, token pricing and hackathons remain C despite task keywords i
   assert.equal(readerFit(api).eligible,false);
 });
 
+test('An API discount in a mixed roundup does not become a consumer plan change',()=>{
+  const roundup=article({originalTitle:'ChatGPTの新機能とClaude料金10分の1：今週のAIニュース',sourceType:'qiita',detailedSummary:'今週のAIニュースをまとめます。Claude HaikuのAPI料金が10分の1になりました。文章作成や情報整理にも使えるAIとの連携も紹介しています。文書の横でAIに依頼する方法や、設定を見直すための情報を整理しました。会社で利用するときは管理者の許可が必要で、二段階認証の設定も勧めています。'});
+  const result=assess(roundup);
+  assert.notEqual(result.importanceGrade,'A');
+  assert.doesNotMatch(result.importanceReason,/普段使うAIの料金・利用条件/);
+});
+
 test('AI delegation for documents is allowed while environment setup and source-code work stay excluded',()=>{
   const delegated=article({originalTitle:'Codexに論文PDFの整理を依頼する手順'});
   assert.equal(readerFit(delegated).eligible,true);
