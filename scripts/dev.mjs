@@ -1,9 +1,10 @@
+import {ICON_FILES} from '../ui-icons.js';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import handler from '../api/feed.js';
 const root = new URL('../', import.meta.url);
-const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png'};
-const allowed = new Set(['index.html','app.js','styles.css','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png']);
+const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml; charset=utf-8'};
+const allowed = new Set(['index.html','app.js','styles.css','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js','reader.css','reader-session.js','ui-icons.js',...ICON_FILES,'icons/LICENSE','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png']);
 const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   const pathname = new URL(req.url,'http://localhost').pathname;

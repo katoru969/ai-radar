@@ -1,8 +1,9 @@
+import {ICON_FILES} from '../ui-icons.js';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 const root = new URL('../public/',import.meta.url),prefix = '/ai-radar/';
-const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png'};
-const assets = new Set(['index.html','app.js','styles.css','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png','data/feed.json']);
+const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml; charset=utf-8'};
+const assets = new Set(['index.html','app.js','styles.css','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js','reader.css','reader-session.js','ui-icons.js',...ICON_FILES,'icons/LICENSE','terms.js','manifest.webmanifest','sw.js','icon-180.png','icon-192.png','icon-512.png','data/feed.json']);
 http.createServer(async (req,res) => {
   const pathname = new URL(req.url,'http://localhost').pathname;
   if (pathname === '/') {res.writeHead(302,{location:prefix});return res.end();}

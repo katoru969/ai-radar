@@ -1,7 +1,7 @@
 const BASE = new URL('./',self.location.href);
 const PREFIX = `ai-radar-${encodeURIComponent(BASE.pathname)}-`;
-const CACHE = `${PREFIX}v1.7.0-today-ratio-20261014`;
-const FILES = ['','index.html','styles.css','app.js','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js','terms.js','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png'];
+const CACHE = `${PREFIX}v1.8.0-reader-20261015`;
+const FILES = ['','index.html','styles.css','app.js','shared.js','importance.js','article-details.js','feed-refresh.js','article-state.js',"reader.css","reader-session.js","ui-icons.js","icons/house.svg","icons/magnifying-glass.svg","icons/book-open.svg","icons/gear-six.svg","icons/bookmark-simple.svg","icons/check.svg","icons/caret-right.svg","icons/caret-left.svg","icons/caret-down.svg","icons/arrow-up-right.svg","icons/arrows-clockwise.svg","icons/x.svg","icons/text-align-left.svg","icons/user.svg","icons/question.svg","icons/list-bullets.svg","icons/info.svg","icons/warning-circle.svg","icons/LICENSE",'terms.js','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png'];
 const ASSETS = FILES.map(name => new URL(name,BASE).href);
 const FEED_URL = new URL('data/feed.json',BASE);
 const PATHS = new Set([...ASSETS.map(url => new URL(url).pathname),FEED_URL.pathname]);
